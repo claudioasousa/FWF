@@ -66,96 +66,120 @@ const StudentsPage = () => {
   };
 
   return (
-    <div className="animate-fadeIn max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+    <div className="animate-fadeIn max-w-7xl mx-auto space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-            <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">Quadro de Alunos</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Gestão centralizada de matrículas e informações acadêmicas.</p>
+            <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">Estudantes</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1 font-medium">Controle acadêmico e emissão de certificados.</p>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-          <div className="relative w-full sm:w-80">
-            <input
-              type="text"
-              placeholder="Buscar por nome ou CPF..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
-            />
-            <span className="absolute left-3.5 top-3.5 text-gray-400">🔍</span>
-          </div>
-          <button onClick={handleAdd} className="w-full sm:w-auto bg-blue-600 text-white px-8 py-3 rounded-2xl hover:bg-blue-700 flex items-center justify-center transition-all shadow-xl shadow-blue-500/30 font-black">
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Novo Aluno
-          </button>
-        </div>
+        <button onClick={handleAdd} className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl hover:bg-blue-700 flex items-center justify-center transition-all shadow-xl shadow-blue-500/20 font-black active:scale-95">
+          <PlusIcon className="h-5 w-5 mr-2" />
+          Cadastrar Aluno
+        </button>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-700">
+      {/* Barra de Busca Premium */}
+      <div className="relative group">
+        <input
+          type="text"
+          placeholder="Busque por nome, CPF ou curso..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-12 pr-6 py-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-3xl shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-lg"
+        />
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors text-xl">🔍</span>
+      </div>
+
+      {/* Visualização de Tabela (Desktop) */}
+      <div className="hidden lg:block bg-white dark:bg-gray-800 shadow-sm rounded-[40px] overflow-hidden border border-gray-100 dark:border-gray-700">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
             <thead className="bg-gray-50/50 dark:bg-gray-900/50">
               <tr>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Educando</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Documento (CPF)</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Curso Matriculado</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Situação</th>
-                <th className="px-8 py-5 text-right text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Ações</th>
+                <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Aluno</th>
+                <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Documento</th>
+                <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Matrícula</th>
+                <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Status</th>
+                <th className="px-8 py-6 text-right text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Ações</th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-50 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
               {filteredStudents.length > 0 ? filteredStudents.map(student => (
-                <tr key={student.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors group">
+                <tr key={student.id} className="hover:bg-blue-50/30 dark:hover:bg-gray-700/30 transition-colors group">
                   <td className="px-8 py-5 whitespace-nowrap">
                     <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mr-4 text-blue-600 font-black">
+                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-4 text-white font-black shadow-lg shadow-blue-500/20">
                             {student.name.charAt(0)}
                         </div>
-                        <div className="text-sm font-black text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">{student.name}</div>
+                        <div className="text-sm font-black text-gray-900 dark:text-white">{student.name}</div>
                     </div>
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap">
-                    <div className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-900 px-3 py-1 rounded-lg w-fit">
-                        {formatCPFDisplay(student.cpf)}
-                    </div>
+                    <div className="text-xs text-gray-500 font-mono font-bold">{formatCPFDisplay(student.cpf)}</div>
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap">
-                    <div className="text-sm font-bold text-gray-600 dark:text-gray-300">
+                    <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
                         {getCourseName(student.courseId)}
-                        {student.class && <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px] font-black">TURMA {student.class}</span>}
+                        {student.class && <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px] font-black border border-gray-200 dark:border-gray-600">TURMA {student.class}</span>}
                     </div>
                   </td>
                   <td className="px-8 py-5 whitespace-nowrap">
-                    <span className={`px-4 py-1.5 inline-flex text-[10px] font-black rounded-full tracking-wider ${getStatusColor(student.status)}`}>
+                    <span className={`px-4 py-1.5 inline-flex text-[10px] font-black rounded-xl tracking-wider ${getStatusColor(student.status)}`}>
                       {student.status}
                     </span>
                   </td>
-                  <td className="px-8 py-5 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end gap-2">
-                        <button onClick={() => handleEdit(student)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all" title="Editar">
+                  <td className="px-8 py-5 whitespace-nowrap text-right">
+                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleEdit(student)} className="p-3 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-2xl transition-all" title="Editar">
                             <EditIcon className="h-5 w-5" />
                         </button>
-                        <button onClick={() => handleDelete(student)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-all" title="Remover">
+                        <button onClick={() => handleDelete(student)} className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-2xl transition-all" title="Excluir">
                             <TrashIcon className="h-5 w-5" />
                         </button>
                     </div>
                   </td>
                 </tr>
               )) : (
-                <tr>
-                  <td colSpan={5} className="px-8 py-20 text-center">
-                    <div className="text-5xl mb-4">👤</div>
-                    <h3 className="text-lg font-bold text-gray-400 uppercase tracking-tighter">Nenhum aluno encontrado</h3>
-                    <p className="text-xs text-gray-400 mt-1">Tente ajustar seus critérios de busca ou cadastre um novo educando.</p>
-                  </td>
-                </tr>
+                <tr><td colSpan={5} className="px-8 py-20 text-center text-gray-400 font-bold uppercase text-xs">Nenhum registro encontrado</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingStudent ? 'Editar Registro' : 'Cadastro de Educando'}>
-        <div className="max-h-[85vh] overflow-y-auto px-1">
+      {/* Visualização de Cards (Mobile) */}
+      <div className="lg:hidden grid grid-cols-1 gap-4">
+        {filteredStudents.length > 0 ? filteredStudents.map(student => (
+          <div key={student.id} className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black mr-4">{student.name.charAt(0)}</div>
+                    <div>
+                        <h3 className="font-black text-gray-900 dark:text-white leading-tight">{student.name}</h3>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{formatCPFDisplay(student.cpf)}</p>
+                    </div>
+                </div>
+                <span className={`px-3 py-1 text-[9px] font-black rounded-lg ${getStatusColor(student.status)}`}>
+                    {student.status}
+                </span>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl mb-5">
+                <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Matrícula Atual</p>
+                <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                    {getCourseName(student.courseId)}
+                    {student.class && <span className="ml-2 font-black text-blue-500">Turma {student.class}</span>}
+                </p>
+            </div>
+            <div className="flex gap-2">
+                <button onClick={() => handleEdit(student)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl font-black text-[10px] uppercase text-gray-600 dark:text-gray-300">Editar</button>
+                <button onClick={() => handleDelete(student)} className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 rounded-xl font-black text-[10px] uppercase text-red-600">Excluir</button>
+            </div>
+          </div>
+        )) : <div className="text-center py-20 text-gray-400 font-black">LISTA VAZIA</div>}
+      </div>
+
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingStudent ? 'Editar Registro' : 'Novo Aluno'}>
+        <div className="max-h-[85vh] overflow-y-auto px-1 custom-scrollbar">
             <StudentForm student={editingStudent} onSave={() => setIsModalOpen(false)} onCancel={() => setIsModalOpen(false)} />
         </div>
       </Modal>
@@ -164,8 +188,8 @@ const StudentsPage = () => {
         isOpen={!!studentToDelete}
         onClose={() => setStudentToDelete(null)}
         onConfirm={confirmDelete}
-        title="Encerrar Registro"
-        message={`Você está prestes a remover o aluno "${studentToDelete?.name}". Todas as informações de frequência e notas vinculadas a este CPF serão excluídas permanentemente. Deseja continuar?`}
+        title="Encerrar Matrícula"
+        message={`Você deseja excluir permanentemente o aluno ${studentToDelete?.name}?`}
       />
     </div>
   );

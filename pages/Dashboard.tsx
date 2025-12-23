@@ -4,24 +4,35 @@ import { useData } from '../hooks/useData';
 import { UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, PlusIcon, ClipboardListIcon } from '../components/Icons';
 import { NavLink } from 'react-router-dom';
 
-const StatCard = ({ title, value, icon, color }: { title: string; value: number; icon: React.ReactNode; color: string }) => (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-        <div className={`p-4 bg-${color}-50 dark:bg-${color}-900/30 rounded-2xl group-hover:rotate-6 transition-transform`}>
-            {icon}
+const StatCard = ({ title, value, icon, color, trend }: { title: string; value: number; icon: React.ReactNode; color: string; trend?: string }) => (
+    <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden relative">
+        <div className="flex justify-between items-start z-10">
+            <div className={`p-4 bg-${color}-50 dark:bg-${color}-900/30 rounded-3xl group-hover:scale-110 transition-transform`}>
+                {icon}
+            </div>
+            {trend && (
+                <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-800">
+                    +{trend}% ↗
+                </span>
+            )}
         </div>
-        <div className="ml-5">
-            <p className="text-xs text-gray-400 uppercase tracking-widest font-black mb-1">{title}</p>
-            <p className="text-4xl font-black text-gray-900 dark:text-white leading-none">{value}</p>
+        <div className="mt-8 z-10">
+            <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black mb-1">{title}</p>
+            <p className="text-5xl font-black text-gray-900 dark:text-white leading-none tracking-tighter">{value}</p>
+        </div>
+        <div className={`absolute -bottom-10 -right-10 text-9xl opacity-5 group-hover:scale-150 transition-transform duration-1000 select-none pointer-events-none text-${color}-600`}>
+            {icon}
         </div>
     </div>
 );
 
 const QuickAction = ({ to, label, icon, bg }: { to: string; label: string; icon: React.ReactNode; bg: string }) => (
-    <NavLink to={to} className={`${bg} p-4 rounded-2xl flex items-center justify-between group hover:scale-[1.02] active:scale-95 transition-all text-white shadow-lg`}>
-        <span className="font-black text-sm uppercase tracking-tight">{label}</span>
-        <div className="p-2 bg-white/20 rounded-xl group-hover:rotate-12 transition-transform">
+    <NavLink to={to} className={`${bg} p-5 rounded-3xl flex items-center justify-between group hover:shadow-2xl transition-all text-white relative overflow-hidden active:scale-95`}>
+        <span className="font-black text-sm uppercase tracking-wider relative z-10">{label}</span>
+        <div className="p-3 bg-white/20 rounded-2xl group-hover:rotate-12 transition-transform relative z-10">
             {icon}
         </div>
+        <div className="absolute inset-0 bg-black/10 translate-y-full group-hover:translate-y-0 transition-transform"></div>
     </NavLink>
 );
 
@@ -32,101 +43,109 @@ const Dashboard = () => {
         return {
             cursando: students.filter(s => s.status === 'CURSANDO').length,
             concluidos: students.filter(s => s.status === 'APROVADO').length,
-            evasao: students.filter(s => s.status === 'DESISTENTE').length
+            evasao: students.filter(s => s.status === 'DESISTENTE').length,
+            aproveitamento: students.length > 0 ? Math.round((students.filter(s => s.status === 'APROVADO').length / students.length) * 100) : 0
         }
     }, [students]);
 
     const recentStudents = useMemo(() => {
-        return [...students].reverse().slice(0, 5);
+        return [...students].reverse().slice(0, 4);
     }, [students]);
 
     return (
-        <div className="animate-fadeIn max-w-7xl mx-auto pb-10">
-            <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div className="animate-fadeIn max-w-7xl mx-auto space-y-10 pb-10">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
-                    <h1 className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">Portal Admin</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">Acompanhamento em tempo real da rede educacional.</p>
+                    <span className="text-blue-600 font-black text-xs uppercase tracking-widest mb-2 block">Painel Geral</span>
+                    <h1 className="text-6xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">Visão Global</h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-4 text-lg font-medium max-w-lg">Métricas estratégicas e controle operacional da sua rede de ensino em tempo real.</p>
                 </div>
-                <div className="flex gap-2">
-                    <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-[10px] font-black uppercase text-gray-400">v2.0 Estável</span>
+                <div className="flex gap-3">
+                    <div className="px-5 py-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-3"></div>
+                        <span className="text-[10px] font-black uppercase text-gray-400">Sistema Online</span>
+                    </div>
                 </div>
             </header>
 
             {/* ATALHOS RÁPIDOS */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-                <QuickAction to="/alunos" label="Nova Matrícula" icon={<PlusIcon className="h-5 w-5" />} bg="bg-blue-600" />
-                <QuickAction to="/cursos" label="Novo Curso" icon={<BookOpenIcon className="h-5 w-5" />} bg="bg-indigo-600" />
-                <QuickAction to="/enturmacao" label="Distribuir Turmas" icon={<ClipboardListIcon className="h-5 w-5" />} bg="bg-emerald-600" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <QuickAction to="/alunos" label="Matrícula Rápida" icon={<PlusIcon className="h-6 w-6" />} bg="bg-blue-600 shadow-blue-500/20" />
+                <QuickAction to="/cursos" label="Nova Oferta" icon={<BookOpenIcon className="h-6 w-6" />} bg="bg-indigo-600 shadow-indigo-500/20" />
+                <QuickAction to="/relatorios" label="Painel PDF" icon={<ClipboardListIcon className="h-6 w-6" />} bg="bg-emerald-600 shadow-emerald-500/20" />
             </div>
 
             {/* CARDS PRINCIPAIS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <StatCard title="Educandos" value={students.length} icon={<UsersIcon className="h-7 w-7 text-blue-600" />} color="blue" />
-                <StatCard title="Cursos" value={courses.length} icon={<BookOpenIcon className="h-7 w-7 text-emerald-600" />} color="emerald" />
-                <StatCard title="Docentes" value={teachers.length} icon={<UserCheckIcon className="h-7 w-7 text-amber-600" />} color="amber" />
-                <StatCard title="Parceiros" value={partners.length} icon={<BriefcaseIcon className="h-7 w-7 text-indigo-600" />} color="indigo" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <StatCard title="Estudantes" value={students.length} icon={<UsersIcon className="h-8 w-8 text-blue-600" />} color="blue" trend="12" />
+                <StatCard title="Cursos Ativos" value={courses.length} icon={<BookOpenIcon className="h-8 w-8 text-indigo-600" />} color="indigo" />
+                <StatCard title="Corpo Docente" value={teachers.length} icon={<UserCheckIcon className="h-8 w-8 text-amber-600" />} color="amber" />
+                <StatCard title="Patrocínios" value={partners.length} icon={<BriefcaseIcon className="h-8 w-8 text-emerald-600" />} color="emerald" trend="5" />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* SITUAÇÃO ACADÊMICA */}
-                <div className="lg:col-span-2 space-y-8">
-                    <div className="bg-white dark:bg-gray-800 p-10 rounded-[40px] shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden">
-                        <h2 className="text-2xl font-black mb-8">Performance Acadêmica</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                            <div className="p-6 bg-blue-50/50 dark:bg-blue-900/10 rounded-3xl border border-blue-50 dark:border-blue-900/30">
-                                <p className="text-[10px] font-black uppercase text-blue-400 mb-2">Em curso</p>
-                                <p className="text-4xl font-black text-blue-700 dark:text-blue-300">{studentStats.cursando}</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                {/* PERFORMANCE ACADÊMICA */}
+                <div className="lg:col-span-2 space-y-10">
+                    <div className="bg-white dark:bg-gray-800 p-12 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
+                        <h2 className="text-3xl font-black mb-10 tracking-tight">Performance Acadêmica</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 relative z-10">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase text-blue-400 mb-2">Engajados</span>
+                                <span className="text-4xl font-black text-blue-600 dark:text-blue-400">{studentStats.cursando}</span>
+                                <div className="mt-4 h-1.5 w-full bg-blue-50 dark:bg-blue-900/30 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-600" style={{ width: `${(studentStats.cursando/students.length)*100}%` }}></div>
+                                </div>
                             </div>
-                            <div className="p-6 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-3xl border border-emerald-50 dark:border-emerald-900/30">
-                                <p className="text-[10px] font-black uppercase text-emerald-400 mb-2">Sucesso (Aprov)</p>
-                                <p className="text-4xl font-black text-emerald-700 dark:text-emerald-300">{studentStats.concluidos}</p>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase text-emerald-400 mb-2">Sucesso (Graduados)</span>
+                                <span className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{studentStats.concluidos}</span>
+                                <div className="mt-4 h-1.5 w-full bg-emerald-50 dark:border-emerald-900/30 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-500" style={{ width: `${studentStats.aproveitamento}%` }}></div>
+                                </div>
                             </div>
-                            <div className="p-6 bg-rose-50/50 dark:bg-rose-900/10 rounded-3xl border border-rose-50 dark:border-rose-900/30">
-                                <p className="text-[10px] font-black uppercase text-rose-400 mb-2">Desistência</p>
-                                <p className="text-4xl font-black text-rose-700 dark:text-rose-300">{studentStats.evasao}</p>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase text-rose-400 mb-2">Evasão</span>
+                                <span className="text-4xl font-black text-rose-600 dark:text-rose-400">{studentStats.evasao}</span>
+                                <div className="mt-4 h-1.5 w-full bg-rose-50 dark:bg-rose-900/30 rounded-full overflow-hidden">
+                                    <div className="h-full bg-rose-500" style={{ width: `${(studentStats.evasao/students.length)*100}%` }}></div>
+                                </div>
                             </div>
                         </div>
-                        <div className="mt-10 flex justify-end">
-                            <NavLink to="/relatorios" className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-6 py-2 rounded-xl text-sm font-black text-gray-600 dark:text-gray-300 transition-colors">Exportar Relatórios PDF</NavLink>
-                        </div>
-                        <div className="absolute bottom-[-50px] left-[-30px] text-[180px] text-blue-500/5 select-none pointer-events-none font-black italic">DATA</div>
+                        <div className="absolute -right-20 -top-20 text-[240px] font-black italic text-gray-100 dark:text-gray-900/20 select-none pointer-events-none group-hover:-translate-x-10 transition-transform duration-1000">DATA</div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-700 p-10 rounded-[40px] shadow-2xl shadow-blue-500/30 text-white relative group overflow-hidden">
-                        <div className="relative z-10">
-                            <h2 className="text-3xl font-black mb-3">Expansão de Cursos</h2>
-                            <p className="text-blue-100 max-w-md font-medium">Novas parcerias corporativas e editais estão disponíveis para planejamento.</p>
-                            <NavLink to="/parceiros" className="mt-8 inline-flex bg-white text-blue-700 px-8 py-3 rounded-2xl font-black hover:bg-blue-50 hover:shadow-lg transition-all active:scale-95">Gerenciar Parceiros</NavLink>
+                    <div className="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-950 p-12 rounded-[48px] shadow-2xl shadow-blue-500/30 text-white flex flex-col md:flex-row items-center justify-between gap-8 group">
+                        <div className="max-w-md">
+                            <h2 className="text-4xl font-black mb-4 tracking-tighter leading-tight">Expansão de Portfolio 2025</h2>
+                            <p className="text-blue-200 font-medium">Novos editais de parcerias corporativas abertos para planejamento do segundo semestre.</p>
+                            <button className="mt-10 bg-white text-blue-900 px-10 py-4 rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-blue-50 transition-all active:scale-95">Explorar Parceiros</button>
                         </div>
-                        <div className="absolute top-10 right-10 text-9xl opacity-20 group-hover:scale-125 transition-transform duration-700">🏢</div>
+                        <div className="text-9xl group-hover:rotate-12 group-hover:scale-110 transition-transform duration-700">🏢</div>
                     </div>
                 </div>
 
-                {/* ATIVIDADE RECENTE */}
-                <div className="bg-white dark:bg-gray-800 p-10 rounded-[40px] shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col">
-                    <h2 className="text-2xl font-black mb-8 flex items-center">
-                        Últimos Ingressos
-                        <span className="ml-3 px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-[10px] rounded-lg">LIVE</span>
+                {/* ÚLTIMOS INGRESSOS */}
+                <div className="bg-white dark:bg-gray-800 p-12 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h2 className="text-2xl font-black mb-10 flex items-center">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 mr-3 animate-ping"></span>
+                        Novos Alunos
                     </h2>
-                    <div className="space-y-8 flex-1">
+                    <div className="space-y-10">
                         {recentStudents.length > 0 ? recentStudents.map(s => (
-                            <div key={s.id} className="flex items-center gap-5 group cursor-default">
-                                <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center font-black text-blue-500 shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
+                            <div key={s.id} className="flex items-center gap-6 group">
+                                <div className="w-14 h-14 rounded-3xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center font-black text-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
                                     {s.name.charAt(0)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-black text-gray-900 dark:text-white truncate">{s.name}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight mt-0.5">{s.status}</p>
+                                    <p className="text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition-colors leading-tight">{s.name}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{s.status}</p>
                                 </div>
                             </div>
                         )) : (
-                            <div className="h-full flex flex-col items-center justify-center text-gray-300 dark:text-gray-600 py-10">
-                                <span className="text-6xl mb-4">🌪️</span>
-                                <p className="font-bold uppercase text-xs">Sem atividade</p>
-                            </div>
+                            <div className="text-center py-20 text-gray-300 font-black uppercase tracking-tighter">Sem registros</div>
                         )}
                     </div>
-                    <NavLink to="/alunos" className="mt-10 text-center py-3 bg-gray-50 dark:bg-gray-900/50 rounded-2xl text-[10px] font-black text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all tracking-widest uppercase">Ver Listagem Completa</NavLink>
+                    <NavLink to="/alunos" className="mt-14 w-full py-5 bg-gray-50 dark:bg-gray-900/50 rounded-3xl text-[10px] font-black text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all text-center block uppercase tracking-widest">Acessar Listagem Completa</NavLink>
                 </div>
             </div>
         </div>
