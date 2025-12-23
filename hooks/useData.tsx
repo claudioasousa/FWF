@@ -23,7 +23,9 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-export const DataProvider = ({ children }: { children: ReactNode }) => {
+// FIX: Use React.PropsWithChildren to correctly type components that accept children.
+// This resolves the error where TypeScript might think the children prop is missing in App.tsx.
+export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [students, setStudents] = useState<Student[]>(() => JSON.parse(localStorage.getItem('students') || '[]'));
   const [teachers, setTeachers] = useState<Teacher[]>(() => JSON.parse(localStorage.getItem('teachers') || '[]'));
   const [courses, setCourses] = useState<Course[]>(() => JSON.parse(localStorage.getItem('courses') || '[]'));

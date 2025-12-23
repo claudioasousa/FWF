@@ -74,7 +74,6 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
     // Busca conflitos: mesmo CPF em curso no mesmo período
     const conflict = students.find(s => {
-      // Ignorar o próprio registro se for edição
       if (student && s.id === student.id) return false;
       
       const sCleanCPF = s.cpf.replace(/\D/g, '');
@@ -101,7 +100,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
     const finalData = {
       ...formData,
-      cpf: formData.cpf.replace(/\D/g, '') // Salva apenas números para consistência
+      cpf: formData.cpf.replace(/\D/g, '')
     };
 
     if (student) {
@@ -115,7 +114,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 mb-4 animate-shake">
+          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 mb-4 animate-pulse">
             <p className="text-xs font-bold text-red-600 dark:text-red-400">{error}</p>
           </div>
         )}
@@ -139,13 +138,13 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                 />
             </div>
             <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Data de Nascimento</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Nascimento</label>
                 <input type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} required className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" />
             </div>
         </div>
 
         <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Vincular ao Curso</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Curso</label>
             <select name="courseId" value={formData.courseId} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all font-medium">
                 <option value="">Nenhum curso selecionado</option>
                 {courses.map(c => (
@@ -154,21 +153,20 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                   </option>
                 ))}
             </select>
-            <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-tighter">Não é permitido CPFs duplicados no mesmo período de horário.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
             <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Turma Sugerida</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Letra da Turma</label>
                 <select name="class" value={formData.class} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all">
                     <option value="">Sem Turma</option>
                     {classOptions.map(letter => (
-                        <option key={letter} value={letter}>{letter}</option>
+                        <option key={letter} value={letter}>Turma {letter}</option>
                     ))}
                 </select>
             </div>
             <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Situação Cadastral</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Situação</label>
                 <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all">
                     <option value="CURSANDO">Cursando</option>
                     <option value="APROVADO">Aprovado</option>
@@ -181,7 +179,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
       <div className="flex justify-end space-x-3 mt-8 border-t dark:border-gray-700 pt-6">
         <button type="button" onClick={onCancel} className="px-6 py-2.5 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all">Cancelar</button>
         <button type="submit" className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95">
-          {student ? 'Atualizar Dados' : 'Efetivar Matrícula'}
+          {student ? 'Salvar Alterações' : 'Confirmar Matrícula'}
         </button>
       </div>
     </form>
