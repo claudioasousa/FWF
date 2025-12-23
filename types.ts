@@ -1,0 +1,41 @@
+
+export interface Student {
+  id: string;
+  name: string;
+  cpf: string;
+  contact: string;
+  birthDate: string;
+  address: string;
+  courseId: string;
+  status: 'CURSANDO' | 'APROVADO' | 'REPROVADO' | 'DESISTENTE';
+  class: string; // Turma A, B, C
+}
+
+export interface Teacher {
+  id: string;
+  name: string;
+  email: string;
+  contact: string;
+  specialization: string; // Formação
+}
+
+export interface Partner {
+  id:string;
+  companyName: string;
+  responsible: string;
+  contact: string;
+  address: string;
+}
+
+export interface Course {
+  id: string;
+  name: string;
+  workload: number; // Carga Horaria
+  startDate: string;
+  endDate: string;
+  period: 'Manhã' | 'Tarde' | 'Noite';
+  location: string;
+  partnerId?: string;
+  teacherIds: string[];
+  status: 'Ativo' | 'Inativo' | 'Concluído';
+}

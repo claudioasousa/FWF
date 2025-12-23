@@ -1,0 +1,5 @@
+{
+  "name": "Gestão de Cursos",
+  "description": "A comprehensive application to manage courses, students, teachers, and partners. It includes features for enrollment, reporting, and data management.",
+  "requestFramePermissions": []
+}
