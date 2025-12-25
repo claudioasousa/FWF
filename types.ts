@@ -41,6 +41,8 @@ export interface Course {
   workload: number;
   startDate: string;
   endDate: string;
+  startTime: string;
+  endTime: string;
   period: 'Manhã' | 'Tarde' | 'Noite';
   location: string;
   partnerId?: string;

@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import type { Student } from '../types';
+import type { Student, Course } from '../types';
 
 const EnrollmentPage = () => {
     const { students, courses, updateStudent } = useData();
@@ -13,7 +13,7 @@ const EnrollmentPage = () => {
     const [searchAvailable, setSearchAvailable] = useState('');
     const [searchEnrolled, setSearchEnrolled] = useState('');
 
-    // Segurança extra: redirecionar se não for admin
+    // Safety check: redirect if not admin
     useEffect(() => {
         if (!isAdmin) {
             navigate('/');
@@ -44,6 +44,35 @@ const EnrollmentPage = () => {
     }, [students, selectedCourseId, searchAvailable, searchEnrolled]);
 
     const handleEnroll = (student: Student) => {
+        if (!selectedCourseId) return;
+
+        const targetCourse = courses.find(c => c.id === selectedCourseId);
+        if (!targetCourse) return;
+
+        // Check if student (CPF) has a course in the same turn/period with overlapping dates
+        const cleanCPF = student.cpf.replace(/\D/g, '');
+        const conflict = students.find(s => {
+            if (s.id === student.id) return false;
+            
+            const sCleanCPF = s.cpf.replace(/\D/g, '');
+            if (sCleanCPF === cleanCPF && s.courseId) {
+                const otherCourse = courses.find(c => c.id === s.courseId);
+                if (otherCourse && otherCourse.period === targetCourse.period) {
+                    // Date overlap check
+                    const overlap = (targetCourse.startDate <= otherCourse.endDate) && 
+                                    (otherCourse.startDate <= targetCourse.endDate);
+                    return overlap;
+                }
+            }
+            return false;
+        });
+
+        if (conflict) {
+            const conflictCourse = courses.find(c => c.id === conflict.courseId);
+            alert(`Conflito de Horário: Este aluno já está matriculado no curso "${conflictCourse?.name}" no mesmo turno (${targetCourse.period}) com datas coincidentes.`);
+            return;
+        }
+
         updateStudent({ ...student, courseId: selectedCourseId });
     };
 

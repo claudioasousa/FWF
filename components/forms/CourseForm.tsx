@@ -16,6 +16,8 @@ const CourseForm = ({ course, onSave, onCancel }: CourseFormProps) => {
     workload: 0,
     startDate: '',
     endDate: '',
+    startTime: '',
+    endTime: '',
     period: 'Manhã' as Course['period'],
     location: '',
     partnerId: '',
@@ -30,6 +32,8 @@ const CourseForm = ({ course, onSave, onCancel }: CourseFormProps) => {
         workload: course.workload,
         startDate: course.startDate,
         endDate: course.endDate,
+        startTime: course.startTime || '',
+        endTime: course.endTime || '',
         period: course.period,
         location: course.location,
         partnerId: course.partnerId || '',
@@ -84,31 +88,48 @@ const CourseForm = ({ course, onSave, onCancel }: CourseFormProps) => {
           <div>
               <label className={labelClass}>Status</label>
               <select name="status" value={formData.status} onChange={handleChange} className={inputClass}>
-                  <option value="Ativo">🟢 Ativo</option>
-                  <option value="Inativo">🔴 Inativo</option>
-                  <option value="Concluído">🔵 Concluído</option>
+                  <option value="Ativo">Ativo</option>
+                  <option value="Inativo">Inativo</option>
+                  <option value="Concluído">Concluído</option>
               </select>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-              <label className={labelClass}>Turno</label>
-              <select name="period" value={formData.period} onChange={handleChange} className={inputClass}>
-                  <option value="Manhã">🌅 Manhã</option>
-                  <option value="Tarde">☀️ Tarde</option>
-                  <option value="Noite">🌙 Noite</option>
-              </select>
+              <label className={labelClass}>Data de Início</label>
+              <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required className={inputClass} />
           </div>
           <div>
-              <label className={labelClass}>Início previsto</label>
-              <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required className={inputClass} />
+              <label className={labelClass}>Data de Término</label>
+              <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} required className={inputClass} />
           </div>
         </div>
 
-        <div>
-            <label className={labelClass}>Local ou Polo</label>
-            <input type="text" name="location" value={formData.location} onChange={handleChange} required className={inputClass} placeholder="Ex: Sala 02 ou Unidade Centro" />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+              <label className={labelClass}>Hora de Início</label>
+              <input type="time" name="startTime" value={formData.startTime} onChange={handleChange} required className={inputClass} />
+          </div>
+          <div>
+              <label className={labelClass}>Hora de Término</label>
+              <input type="time" name="endTime" value={formData.endTime} onChange={handleChange} required className={inputClass} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+              <label className={labelClass}>Turno / Período</label>
+              <select name="period" value={formData.period} onChange={handleChange} className={inputClass}>
+                  <option value="Manhã">Manhã</option>
+                  <option value="Tarde">Tarde</option>
+                  <option value="Noite">Noite</option>
+              </select>
+          </div>
+          <div>
+              <label className={labelClass}>Local ou Polo</label>
+              <input type="text" name="location" value={formData.location} onChange={handleChange} required className={inputClass} placeholder="Sala 01, Polo X..." />
+          </div>
         </div>
 
         <div>

@@ -100,19 +100,26 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
     const selectedCourse = courses.find(c => c.id === formData.courseId);
     if (!selectedCourse) return true;
 
+    // Rule: Student cannot be in courses with overlapping dates in the same period (turn)
     const conflict = students.find(s => {
       if (student && s.id === student.id) return false;
+      
       const sCleanCPF = s.cpf.replace(/\D/g, '');
-      if (sCleanCPF === cleanCPF) {
+      if (sCleanCPF === cleanCPF && s.courseId) {
         const otherCourse = courses.find(c => c.id === s.courseId);
-        return otherCourse && otherCourse.period === selectedCourse.period;
+        if (otherCourse && otherCourse.period === selectedCourse.period) {
+           // Overlap: (StartA <= EndB) && (StartB <= EndA)
+           const overlap = (selectedCourse.startDate <= otherCourse.endDate) && 
+                           (otherCourse.startDate <= selectedCourse.endDate);
+           return overlap;
+        }
       }
       return false;
     });
 
     if (conflict) {
       const conflictCourse = courses.find(c => c.id === conflict.courseId);
-      setError(`Conflito: Este CPF já possui matrícula no período ${selectedCourse.period} (Curso: ${conflictCourse?.name}).`);
+      setError(`Conflito: Este aluno já está matriculado no curso "${conflictCourse?.name}" no mesmo turno (${selectedCourse.period}) com datas que se sobrepõem.`);
       return false;
     }
 
