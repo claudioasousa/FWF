@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
 import Modal from '../components/Modal';
 import TeacherForm from '../components/forms/TeacherForm';
 import ConfirmationDialog from '../components/ConfirmationDialog';
@@ -9,6 +10,7 @@ import type { Teacher } from '../types';
 
 const TeachersPage = () => {
   const { teachers, removeTeacher } = useData();
+  const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
@@ -79,12 +81,19 @@ const TeachersPage = () => {
               {teacher.specialization}
             </p>
             <div className="flex gap-2 mt-auto">
-              <button onClick={() => handleEdit(teacher)} className="p-3 text-blue-500 hover:bg-blue-50 rounded-2xl transition-colors">
-                <EditIcon className="h-5 w-5" />
-              </button>
-              <button onClick={() => handleDelete(teacher)} className="p-3 text-red-500 hover:bg-red-50 rounded-2xl transition-colors">
-                <TrashIcon className="h-5 w-5" />
-              </button>
+              {isAdmin && (
+                <>
+                  <button onClick={() => handleEdit(teacher)} className="p-3 text-blue-500 hover:bg-blue-50 rounded-2xl transition-colors">
+                    <EditIcon className="h-5 w-5" />
+                  </button>
+                  <button onClick={() => handleDelete(teacher)} className="p-3 text-red-500 hover:bg-red-50 rounded-2xl transition-colors">
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+              {!isAdmin && (
+                <p className="text-[8px] font-black text-gray-300 uppercase tracking-tighter">Somente Leitura</p>
+              )}
             </div>
           </div>
         )) : (

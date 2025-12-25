@@ -1,13 +1,26 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import type { Student } from '../types';
 
 const EnrollmentPage = () => {
     const { students, courses, updateStudent } = useData();
+    const { isAdmin } = useAuth();
+    const navigate = useNavigate();
     const [selectedCourseId, setSelectedCourseId] = useState<string>(courses[0]?.id || '');
     const [searchAvailable, setSearchAvailable] = useState('');
     const [searchEnrolled, setSearchEnrolled] = useState('');
+
+    // Segurança extra: redirecionar se não for admin
+    useEffect(() => {
+        if (!isAdmin) {
+            navigate('/');
+        }
+    }, [isAdmin, navigate]);
+
+    if (!isAdmin) return null;
 
     const classOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 

@@ -4,23 +4,23 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { HomeIcon, UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, ClipboardListIcon, FileDownIcon, XIcon } from './Icons';
 
-const navItems = [
-  { to: '/', text: 'Dashboard', icon: <HomeIcon className="h-5 w-5" /> },
-  { to: '/cursos', text: 'Cursos', icon: <BookOpenIcon className="h-5 w-5" /> },
-  { to: '/alunos', text: 'Estudantes', icon: <UsersIcon className="h-5 w-5" /> },
-  { to: '/professores', text: 'Docentes', icon: <UserCheckIcon className="h-5 w-5" /> },
-  { to: '/parceiros', text: 'Parceiros', icon: <BriefcaseIcon className="h-5 w-5" /> },
-  { to: '/enturmacao', text: 'Enturmação', icon: <ClipboardListIcon className="h-5 w-5" /> },
-  { to: '/relatorios', text: 'Relatórios', icon: <FileDownIcon className="h-5 w-5" /> },
-];
-
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
+
+  const navItems = [
+    { to: '/', text: 'Dashboard', icon: <HomeIcon className="h-5 w-5" />, show: true },
+    { to: '/cursos', text: 'Cursos', icon: <BookOpenIcon className="h-5 w-5" />, show: true },
+    { to: '/alunos', text: 'Estudantes', icon: <UsersIcon className="h-5 w-5" />, show: true },
+    { to: '/professores', text: 'Docentes', icon: <UserCheckIcon className="h-5 w-5" />, show: true },
+    { to: '/parceiros', text: 'Parceiros', icon: <BriefcaseIcon className="h-5 w-5" />, show: true },
+    { to: '/enturmacao', text: 'Enturmação', icon: <ClipboardListIcon className="h-5 w-5" />, show: isAdmin },
+    { to: '/relatorios', text: 'Relatórios', icon: <FileDownIcon className="h-5 w-5" />, show: true },
+  ];
 
   return (
     <>
@@ -46,7 +46,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         </div>
         
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
-          {navItems.map((item) => (
+          {navItems.filter(item => item.show).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

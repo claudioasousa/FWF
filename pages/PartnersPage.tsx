@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
 import Modal from '../components/Modal';
 import PartnerForm from '../components/forms/PartnerForm';
 import ConfirmationDialog from '../components/ConfirmationDialog';
@@ -9,6 +10,7 @@ import type { Partner } from '../types';
 
 const PartnersPage = () => {
   const { partners, removePartner } = useData();
+  const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
@@ -78,12 +80,19 @@ const PartnersPage = () => {
                 <p className="text-sm text-blue-600 dark:text-blue-400 font-bold mt-1 uppercase tracking-wider">{partner.responsible}</p>
               </div>
               <div className="flex gap-1">
-                <button onClick={() => handleEdit(partner)} className="p-3 text-gray-400 hover:text-blue-600 transition-all">
-                  <EditIcon className="h-5 w-5" />
-                </button>
-                <button onClick={() => handleDelete(partner)} className="p-3 text-gray-400 hover:text-red-600 transition-all">
-                  <TrashIcon className="h-5 w-5" />
-                </button>
+                {isAdmin && (
+                  <>
+                    <button onClick={() => handleEdit(partner)} className="p-3 text-gray-400 hover:text-blue-600 transition-all">
+                      <EditIcon className="h-5 w-5" />
+                    </button>
+                    <button onClick={() => handleDelete(partner)} className="p-3 text-gray-400 hover:text-red-600 transition-all">
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
+                {!isAdmin && (
+                  <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-2">Restrito</span>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl">

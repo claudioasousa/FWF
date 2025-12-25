@@ -1,14 +1,16 @@
 
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
 import Modal from '../components/Modal';
 import CourseForm from '../components/forms/CourseForm';
 import ConfirmationDialog from '../components/ConfirmationDialog';
-import { PlusIcon, EditIcon, TrashIcon, BookOpenIcon } from '../components/Icons';
+import { PlusIcon, EditIcon, TrashIcon } from '../components/Icons';
 import type { Course } from '../types';
 
 const CoursesPage = () => {
   const { courses, partners, teachers, removeCourse } = useData();
+  const { isAdmin } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
@@ -21,11 +23,6 @@ const CoursesPage = () => {
     return partners.find(p => p.id === partnerId)?.companyName || 'N/A';
   };
   
-  const getTeacherNames = (teacherIds: string[]) => {
-    if (!teacherIds || teacherIds.length === 0) return 'Não atribuído';
-    return teacherIds.map(id => teachers.find(t => t.id === id)?.name || 'N/A').join(', ');
-  }
-
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'Ativo': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
@@ -110,12 +107,19 @@ const CoursesPage = () => {
                   {course.status}
                 </span>
                 <div className="flex gap-1">
-                  <button onClick={() => handleEdit(course)} className="p-2 text-gray-400 hover:text-blue-600 transition-all">
-                    <EditIcon className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => handleDelete(course)} className="p-2 text-gray-400 hover:text-red-600 transition-all">
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
+                  {isAdmin && (
+                    <>
+                      <button onClick={() => handleEdit(course)} className="p-2 text-gray-400 hover:text-blue-600 transition-all">
+                        <EditIcon className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => handleDelete(course)} className="p-2 text-gray-400 hover:text-red-600 transition-all">
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
+                  {!isAdmin && (
+                    <span className="text-[9px] font-black text-gray-300 uppercase py-2">Somente Leitura</span>
+                  )}
                 </div>
               </div>
               
