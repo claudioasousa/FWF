@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
 import Modal from '../components/Modal';
 import StudentForm from '../components/forms/StudentForm';
 import ConfirmationDialog from '../components/ConfirmationDialog';
@@ -9,6 +10,7 @@ import type { Student } from '../types';
 
 const StudentsPage = () => {
   const { students, courses, removeStudent } = useData();
+  const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -78,7 +80,6 @@ const StudentsPage = () => {
         </button>
       </div>
 
-      {/* Barra de Busca Premium */}
       <div className="relative group">
         <input
           type="text"
@@ -90,7 +91,6 @@ const StudentsPage = () => {
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors text-xl">🔍</span>
       </div>
 
-      {/* Visualização de Tabela (Desktop) */}
       <div className="hidden lg:block bg-white dark:bg-gray-800 shadow-sm rounded-[40px] overflow-hidden border border-gray-100 dark:border-gray-700">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
@@ -133,9 +133,11 @@ const StudentsPage = () => {
                         <button onClick={() => handleEdit(student)} className="p-3 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-2xl transition-all" title="Editar">
                             <EditIcon className="h-5 w-5" />
                         </button>
-                        <button onClick={() => handleDelete(student)} className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-2xl transition-all" title="Excluir">
-                            <TrashIcon className="h-5 w-5" />
-                        </button>
+                        {isAdmin && (
+                          <button onClick={() => handleDelete(student)} className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-2xl transition-all" title="Excluir">
+                              <TrashIcon className="h-5 w-5" />
+                          </button>
+                        )}
                     </div>
                   </td>
                 </tr>
@@ -147,7 +149,6 @@ const StudentsPage = () => {
         </div>
       </div>
 
-      {/* Visualização de Cards (Mobile) */}
       <div className="lg:hidden grid grid-cols-1 gap-4">
         {filteredStudents.length > 0 ? filteredStudents.map(student => (
           <div key={student.id} className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-sm border border-gray-100 dark:border-gray-700">
@@ -172,7 +173,9 @@ const StudentsPage = () => {
             </div>
             <div className="flex gap-2">
                 <button onClick={() => handleEdit(student)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl font-black text-[10px] uppercase text-gray-600 dark:text-gray-300">Editar</button>
-                <button onClick={() => handleDelete(student)} className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 rounded-xl font-black text-[10px] uppercase text-red-600">Excluir</button>
+                {isAdmin && (
+                  <button onClick={() => handleDelete(student)} className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 rounded-xl font-black text-[10px] uppercase text-red-600">Excluir</button>
+                )}
             </div>
           </div>
         )) : <div className="text-center py-20 text-gray-400 font-black">LISTA VAZIA</div>}

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { HomeIcon, UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, ClipboardListIcon, FileDownIcon, XIcon } from './Icons';
 
 const navItems = [
@@ -19,9 +20,10 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
+  const { user, logout } = useAuth();
+
   return (
     <>
-      {/* Overlay Escurecido com Desfoque */}
       <div 
         className={`fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[50] lg:hidden transition-all duration-500 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
@@ -33,7 +35,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) lg:static lg:translate-x-0
         ${isOpen ? 'translate-x-0 shadow-3xl' : '-translate-x-full lg:translate-x-0'}
       `}>
-        {/* Header do Sidebar */}
         <div className="p-8 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/20">G</div>
@@ -44,7 +45,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </button>
         </div>
         
-        {/* Itens de Navegação */}
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => (
             <NavLink
@@ -59,12 +59,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 }`
               }
             >
-              {/* FIX: Using children as a function to access the 'isActive' state from NavLink context */}
               {({ isActive }) => (
                 <>
                   <span className={`transition-transform duration-300 group-hover:scale-110`}>{item.icon}</span>
                   <span className="ml-4">{item.text}</span>
-                  {/* Indicador de item ativo */}
                   <div className={`ml-auto w-1.5 h-1.5 rounded-full bg-white transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}></div>
                 </>
               )}
@@ -72,11 +70,23 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           ))}
         </nav>
         
-        {/* Rodapé do Sidebar */}
-        <div className="p-8">
+        <div className="p-6">
           <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-700">
-             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Suporte Técnico</p>
-             <p className="text-xs font-bold text-blue-600 dark:text-blue-400 underline decoration-2 underline-offset-4 cursor-pointer">Central de Ajuda</p>
+             <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-black text-[10px]">
+                  {user?.name.charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-gray-900 dark:text-white truncate">{user?.name}</p>
+                  <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{user?.role}</p>
+                </div>
+             </div>
+             <button 
+               onClick={logout}
+               className="w-full py-2.5 bg-white dark:bg-gray-800 text-rose-500 font-black text-[10px] uppercase tracking-widest rounded-xl border border-rose-50 dark:border-rose-900/20 hover:bg-rose-50 transition-all active:scale-95"
+             >
+               Sair do Sistema
+             </button>
           </div>
         </div>
       </aside>

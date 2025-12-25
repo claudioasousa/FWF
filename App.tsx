@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import StudentsPage from './pages/StudentsPage';
@@ -9,23 +9,45 @@ import TeachersPage from './pages/TeachersPage';
 import PartnersPage from './pages/PartnersPage';
 import EnrollmentPage from './pages/EnrollmentPage';
 import ReportsPage from './pages/ReportsPage';
+import LoginPage from './pages/LoginPage';
 import { DataProvider } from './hooks/useData';
+import { AuthProvider, useAuth } from './hooks/useAuth';
+
+const AppContent = () => {
+  const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/alunos" element={<StudentsPage />} />
+        <Route path="/cursos" element={<CoursesPage />} />
+        <Route path="/professores" element={<TeachersPage />} />
+        <Route path="/parceiros" element={<PartnersPage />} />
+        <Route path="/enturmacao" element={<EnrollmentPage />} />
+        <Route path="/relatorios" element={<ReportsPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
+  );
+};
 
 function App() {
   return (
-    <DataProvider>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/alunos" element={<StudentsPage />} />
-          <Route path="/cursos" element={<CoursesPage />} />
-          <Route path="/professores" element={<TeachersPage />} />
-          <Route path="/parceiros" element={<PartnersPage />} />
-          <Route path="/enturmacao" element={<EnrollmentPage />} />
-          <Route path="/relatorios" element={<ReportsPage />} />
-        </Routes>
-      </Layout>
-    </DataProvider>
+    <AuthProvider>
+      <DataProvider>
+        <AppContent />
+      </DataProvider>
+    </AuthProvider>
   );
 }
 

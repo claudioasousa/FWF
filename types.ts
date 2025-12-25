@@ -1,4 +1,12 @@
 
+export type UserRole = 'ADMIN' | 'OPERATOR';
+
+export interface User {
+  username: string;
+  name: string;
+  role: UserRole;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -8,7 +16,7 @@ export interface Student {
   address: string;
   courseId: string;
   status: 'CURSANDO' | 'APROVADO' | 'REPROVADO' | 'DESISTENTE';
-  class: string; // Turma A, B, C
+  class: string; 
 }
 
 export interface Teacher {
@@ -16,7 +24,7 @@ export interface Teacher {
   name: string;
   email: string;
   contact: string;
-  specialization: string; // Formação
+  specialization: string;
 }
 
 export interface Partner {
@@ -30,7 +38,7 @@ export interface Partner {
 export interface Course {
   id: string;
   name: string;
-  workload: number; // Carga Horaria
+  workload: number;
   startDate: string;
   endDate: string;
   period: 'Manhã' | 'Tarde' | 'Noite';
