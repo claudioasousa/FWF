@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useData } from '../../hooks/useData';
+import { useAuth } from '../../hooks/useAuth';
 import type { Student, Course } from '../../types';
 
 interface StudentFormProps {
@@ -10,6 +12,7 @@ interface StudentFormProps {
 
 const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
   const { addStudent, updateStudent, courses, students } = useData();
+  const { isAdmin } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -21,6 +24,9 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
     status: 'CURSANDO' as Student['status'],
     class: '',
   });
+
+  const isEnrolled = student && !!student.courseId;
+  const isReadOnly = isEnrolled && !isAdmin;
 
   const classOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
@@ -63,6 +69,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (isReadOnly) return;
     const { name, value } = e.target;
     setError(null);
     
@@ -114,6 +121,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly) return;
     if (!validateEnrollment()) return;
 
     const finalData = {
@@ -138,9 +146,29 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
           </div>
         )}
 
+        {isReadOnly && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-3 mb-6">
+            <p className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-widest">
+              🔒 Registro Bloqueado para Operador
+            </p>
+            <p className="text-[9px] text-amber-600 dark:text-amber-500 font-bold">
+              Alunos enturmados só podem ser alterados por administradores.
+            </p>
+          </div>
+        )}
+
         <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Nome Completo</label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" placeholder="Ex: João Silva" />
+            <input 
+              type="text" 
+              name="name" 
+              value={formData.name} 
+              onChange={handleChange} 
+              required 
+              readOnly={isReadOnly}
+              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`} 
+              placeholder="Ex: João Silva" 
+            />
         </div>
         
         <div className="grid grid-cols-2 gap-4">
@@ -152,8 +180,9 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                   value={formData.cpf} 
                   onChange={handleChange} 
                   required 
+                  readOnly={isReadOnly}
                   placeholder="000.000.000-00"
-                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
+                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`} 
                 />
             </div>
             <div>
@@ -164,8 +193,9 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                   value={formData.contact} 
                   onChange={handleChange} 
                   required 
+                  readOnly={isReadOnly}
                   placeholder="(00) 00000-0000"
-                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
+                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`} 
                 />
             </div>
         </div>
@@ -173,11 +203,25 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
         <div className="grid grid-cols-2 gap-4">
             <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Nascimento</label>
-                <input type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} required className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" />
+                <input 
+                  type="date" 
+                  name="birthDate" 
+                  value={formData.birthDate} 
+                  onChange={handleChange} 
+                  required 
+                  readOnly={isReadOnly}
+                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`} 
+                />
             </div>
             <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Situação</label>
-                <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all">
+                <select 
+                  name="status" 
+                  value={formData.status} 
+                  onChange={handleChange} 
+                  disabled={isReadOnly}
+                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`}
+                >
                     <option value="CURSANDO">Cursando</option>
                     <option value="APROVADO">Aprovado</option>
                     <option value="REPROVADO">Reprovado</option>
@@ -188,20 +232,41 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
         <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Endereço</label>
-            <input type="text" name="address" value={formData.address} onChange={handleChange} required className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" placeholder="Rua, número, bairro" />
+            <input 
+              type="text" 
+              name="address" 
+              value={formData.address} 
+              onChange={handleChange} 
+              required 
+              readOnly={isReadOnly}
+              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`} 
+              placeholder="Rua, número, bairro" 
+            />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-1">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Curso</label>
-              <select name="courseId" value={formData.courseId} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all font-medium">
+              <select 
+                name="courseId" 
+                value={formData.courseId} 
+                onChange={handleChange} 
+                disabled={isReadOnly}
+                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all font-medium ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`}
+              >
                   <option value="">Nenhum curso</option>
                   {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
           </div>
           <div className="col-span-1">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Letra da Turma</label>
-              <select name="class" value={formData.class} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all">
+              <select 
+                name="class" 
+                value={formData.class} 
+                onChange={handleChange} 
+                disabled={isReadOnly}
+                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`}
+              >
                   <option value="">-</option>
                   {classOptions.map(letter => <option key={letter} value={letter}>Turma {letter}</option>)}
               </select>
@@ -209,10 +274,14 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
         </div>
 
       <div className="flex justify-end space-x-3 mt-8 border-t dark:border-gray-700 pt-6">
-        <button type="button" onClick={onCancel} className="px-6 py-2.5 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all">Cancelar</button>
-        <button type="submit" className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95">
-          {student ? 'Salvar Alterações' : 'Confirmar Matrícula'}
+        <button type="button" onClick={onCancel} className="px-6 py-2.5 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all">
+          {isReadOnly ? 'Fechar' : 'Cancelar'}
         </button>
+        {!isReadOnly && (
+          <button type="submit" className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95">
+            {student ? 'Salvar Alterações' : 'Confirmar Matrícula'}
+          </button>
+        )}
       </div>
     </form>
   );

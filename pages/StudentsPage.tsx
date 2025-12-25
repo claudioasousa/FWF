@@ -29,7 +29,7 @@ const StudentsPage = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'CURSANDO': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200';
-      case 'APROVADO': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200';
+      case 'APROVADO': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-blue-200';
       case 'REPROVADO': return 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200';
       case 'DESISTENTE': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
@@ -104,44 +104,55 @@ const StudentsPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-              {filteredStudents.length > 0 ? filteredStudents.map(student => (
-                <tr key={student.id} className="hover:bg-blue-50/30 dark:hover:bg-gray-700/30 transition-colors group">
-                  <td className="px-8 py-5 whitespace-nowrap">
-                    <div className="flex items-center">
-                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-4 text-white font-black shadow-lg shadow-blue-500/20">
-                            {student.name.charAt(0)}
-                        </div>
-                        <div className="text-sm font-black text-gray-900 dark:text-white">{student.name}</div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-5 whitespace-nowrap">
-                    <div className="text-xs text-gray-500 font-mono font-bold">{formatCPFDisplay(student.cpf)}</div>
-                  </td>
-                  <td className="px-8 py-5 whitespace-nowrap">
-                    <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                        {getCourseName(student.courseId)}
-                        {student.class && <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px] font-black border border-gray-200 dark:border-gray-600">TURMA {student.class}</span>}
-                    </div>
-                  </td>
-                  <td className="px-8 py-5 whitespace-nowrap">
-                    <span className={`px-4 py-1.5 inline-flex text-[10px] font-black rounded-xl tracking-wider ${getStatusColor(student.status)}`}>
-                      {student.status}
-                    </span>
-                  </td>
-                  <td className="px-8 py-5 whitespace-nowrap text-right">
-                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleEdit(student)} className="p-3 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-2xl transition-all" title="Editar">
-                            <EditIcon className="h-5 w-5" />
-                        </button>
-                        {isAdmin && (
-                          <button onClick={() => handleDelete(student)} className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-2xl transition-all" title="Excluir">
-                              <TrashIcon className="h-5 w-5" />
-                          </button>
-                        )}
-                    </div>
-                  </td>
-                </tr>
-              )) : (
+              {filteredStudents.length > 0 ? filteredStudents.map(student => {
+                const isEnrolled = !!student.courseId;
+                const canEdit = isAdmin || !isEnrolled;
+
+                return (
+                  <tr key={student.id} className="hover:bg-blue-50/30 dark:hover:bg-gray-700/30 transition-colors group">
+                    <td className="px-8 py-5 whitespace-nowrap">
+                      <div className="flex items-center">
+                          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-4 text-white font-black shadow-lg shadow-blue-500/20">
+                              {student.name.charAt(0)}
+                          </div>
+                          <div className="text-sm font-black text-gray-900 dark:text-white">{student.name}</div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5 whitespace-nowrap">
+                      <div className="text-xs text-gray-500 font-mono font-bold">{formatCPFDisplay(student.cpf)}</div>
+                    </td>
+                    <td className="px-8 py-5 whitespace-nowrap">
+                      <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                          {getCourseName(student.courseId)}
+                          {student.class && <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[10px] font-black border border-gray-200 dark:border-gray-600">TURMA {student.class}</span>}
+                      </div>
+                    </td>
+                    <td className="px-8 py-5 whitespace-nowrap">
+                      <span className={`px-4 py-1.5 inline-flex text-[10px] font-black rounded-xl tracking-wider ${getStatusColor(student.status)}`}>
+                        {student.status}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5 whitespace-nowrap text-right">
+                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {canEdit ? (
+                            <button onClick={() => handleEdit(student)} className="p-3 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-2xl transition-all" title="Editar">
+                                <EditIcon className="h-5 w-5" />
+                            </button>
+                          ) : (
+                            <span className="p-3 text-gray-300 dark:text-gray-600 cursor-not-allowed" title="Edição bloqueada (Aluno Enturmado)">
+                              🔒
+                            </span>
+                          )}
+                          {isAdmin && (
+                            <button onClick={() => handleDelete(student)} className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-2xl transition-all" title="Excluir">
+                                <TrashIcon className="h-5 w-5" />
+                            </button>
+                          )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }) : (
                 <tr><td colSpan={5} className="px-8 py-20 text-center text-gray-400 font-bold uppercase text-xs">Nenhum registro encontrado</td></tr>
               )}
             </tbody>
@@ -150,35 +161,46 @@ const StudentsPage = () => {
       </div>
 
       <div className="lg:hidden grid grid-cols-1 gap-4">
-        {filteredStudents.length > 0 ? filteredStudents.map(student => (
-          <div key={student.id} className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black mr-4">{student.name.charAt(0)}</div>
-                    <div>
-                        <h3 className="font-black text-gray-900 dark:text-white leading-tight">{student.name}</h3>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{formatCPFDisplay(student.cpf)}</p>
+        {filteredStudents.length > 0 ? filteredStudents.map(student => {
+          const isEnrolled = !!student.courseId;
+          const canEdit = isAdmin || !isEnrolled;
+
+          return (
+            <div key={student.id} className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-sm border border-gray-100 dark:border-gray-700">
+              <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black mr-4">{student.name.charAt(0)}</div>
+                      <div>
+                          <h3 className="font-black text-gray-900 dark:text-white leading-tight">{student.name}</h3>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{formatCPFDisplay(student.cpf)}</p>
+                      </div>
+                  </div>
+                  <span className={`px-3 py-1 text-[9px] font-black rounded-lg ${getStatusColor(student.status)}`}>
+                      {student.status}
+                  </span>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl mb-5">
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Matrícula Atual</p>
+                  <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                      {getCourseName(student.courseId)}
+                      {student.class && <span className="ml-2 font-black text-blue-500">Turma {student.class}</span>}
+                  </p>
+              </div>
+              <div className="flex gap-2">
+                  {canEdit ? (
+                    <button onClick={() => handleEdit(student)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl font-black text-[10px] uppercase text-gray-600 dark:text-gray-300">Editar</button>
+                  ) : (
+                    <div className="flex-1 py-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl font-black text-[10px] uppercase text-gray-400 text-center flex items-center justify-center gap-2">
+                      🔒 Bloqueado
                     </div>
-                </div>
-                <span className={`px-3 py-1 text-[9px] font-black rounded-lg ${getStatusColor(student.status)}`}>
-                    {student.status}
-                </span>
+                  )}
+                  {isAdmin && (
+                    <button onClick={() => handleDelete(student)} className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 rounded-xl font-black text-[10px] uppercase text-red-600">Excluir</button>
+                  )}
+              </div>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl mb-5">
-                <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Matrícula Atual</p>
-                <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                    {getCourseName(student.courseId)}
-                    {student.class && <span className="ml-2 font-black text-blue-500">Turma {student.class}</span>}
-                </p>
-            </div>
-            <div className="flex gap-2">
-                <button onClick={() => handleEdit(student)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl font-black text-[10px] uppercase text-gray-600 dark:text-gray-300">Editar</button>
-                {isAdmin && (
-                  <button onClick={() => handleDelete(student)} className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 rounded-xl font-black text-[10px] uppercase text-red-600">Excluir</button>
-                )}
-            </div>
-          </div>
-        )) : <div className="text-center py-20 text-gray-400 font-black">LISTA VAZIA</div>}
+          );
+        }) : <div className="text-center py-20 text-gray-400 font-black">LISTA VAZIA</div>}
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingStudent ? 'Editar Registro' : 'Novo Aluno'}>
