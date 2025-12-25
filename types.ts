@@ -2,9 +2,11 @@
 export type UserRole = 'ADMIN' | 'OPERATOR';
 
 export interface User {
+  id: string;
   username: string;
   name: string;
   role: UserRole;
+  password?: string;
 }
 
 export interface Student {

@@ -1,6 +1,7 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, UserRole } from '../types';
+import React, { createContext, useContext, useState } from 'react';
+import { User } from '../types';
+import { useData } from './useData';
 
 interface AuthContextType {
   user: User | null;
@@ -12,24 +13,21 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
+  const { users } = useData();
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('auth_user');
+    const saved = localStorage.getItem('auth_session');
     return saved ? JSON.parse(saved) : null;
   });
 
   const login = (username: string, password: string): boolean => {
-    if (password !== 'qwe123') return false;
+    const foundUser = users.find(
+      u => u.username.toLowerCase() === username.toLowerCase() && u.password === password
+    );
 
-    let newUser: User | null = null;
-    if (username.toLowerCase() === 'claudio') {
-      newUser = { username: 'claudio', name: 'Claudio (Admin)', role: 'ADMIN' };
-    } else if (username.toLowerCase() === 'user') {
-      newUser = { username: 'user', name: 'Usuário Operador', role: 'OPERATOR' };
-    }
-
-    if (newUser) {
-      setUser(newUser);
-      localStorage.setItem('auth_user', JSON.stringify(newUser));
+    if (foundUser) {
+      const { password: _, ...userSession } = foundUser; // Remove senha da sessão por segurança
+      setUser(userSession as User);
+      localStorage.setItem('auth_session', JSON.stringify(userSession));
       return true;
     }
     return false;
@@ -37,7 +35,7 @@ export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('auth_user');
+    localStorage.removeItem('auth_session');
   };
 
   const isAdmin = user?.role === 'ADMIN';

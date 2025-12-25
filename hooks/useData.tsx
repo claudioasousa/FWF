@@ -1,12 +1,13 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { Student, Teacher, Course, Partner } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { Student, Teacher, Course, Partner, User } from '../types';
 
 interface DataContextType {
   students: Student[];
   teachers: Teacher[];
   courses: Course[];
   partners: Partner[];
+  users: User[];
   addStudent: (student: Omit<Student, 'id'>) => void;
   updateStudent: (student: Student) => void;
   removeStudent: (id: string) => void;
@@ -19,24 +20,33 @@ interface DataContextType {
   addPartner: (partner: Omit<Partner, 'id'>) => void;
   updatePartner: (partner: Partner) => void;
   removePartner: (id: string) => void;
+  addUser: (user: Omit<User, 'id'>) => void;
+  updateUser: (user: User) => void;
+  removeUser: (id: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-// FIX: Use React.PropsWithChildren to correctly type components that accept children.
-// This resolves the error where TypeScript might think the children prop is missing in App.tsx.
 export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [students, setStudents] = useState<Student[]>(() => JSON.parse(localStorage.getItem('students') || '[]'));
   const [teachers, setTeachers] = useState<Teacher[]>(() => JSON.parse(localStorage.getItem('teachers') || '[]'));
   const [courses, setCourses] = useState<Course[]>(() => JSON.parse(localStorage.getItem('courses') || '[]'));
   const [partners, setPartners] = useState<Partner[]>(() => JSON.parse(localStorage.getItem('partners') || '[]'));
+  
+  const [users, setUsers] = useState<User[]>(() => {
+    const saved = localStorage.getItem('app_users');
+    if (saved) return JSON.parse(saved);
+    // Usuário inicial padrão se não houver nenhum
+    return [{ id: 'admin-init', username: 'claudio', name: 'Claudio (Admin)', role: 'ADMIN', password: 'qwe123' }];
+  });
 
   useEffect(() => {
     localStorage.setItem('students', JSON.stringify(students));
     localStorage.setItem('teachers', JSON.stringify(teachers));
     localStorage.setItem('courses', JSON.stringify(courses));
     localStorage.setItem('partners', JSON.stringify(partners));
-  }, [students, teachers, courses, partners]);
+    localStorage.setItem('app_users', JSON.stringify(users));
+  }, [students, teachers, courses, partners, users]);
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -56,13 +66,18 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const updatePartner = (p: Partner) => setPartners(partners.map(item => item.id === p.id ? p : item));
   const removePartner = (id: string) => setPartners(partners.filter(item => item.id !== id));
 
+  const addUser = (u: Omit<User, 'id'>) => setUsers([...users, { ...u, id: generateId() }]);
+  const updateUser = (u: User) => setUsers(users.map(item => item.id === u.id ? u : item));
+  const removeUser = (id: string) => setUsers(users.filter(item => item.id !== id));
+
   return (
     <DataContext.Provider value={{
-      students, teachers, courses, partners,
+      students, teachers, courses, partners, users,
       addStudent, updateStudent, removeStudent,
       addTeacher, updateTeacher, removeTeacher,
       addCourse, updateCourse, removeCourse,
-      addPartner, updatePartner, removePartner
+      addPartner, updatePartner, removePartner,
+      addUser, updateUser, removeUser
     }}>
       {children}
     </DataContext.Provider>

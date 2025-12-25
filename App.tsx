@@ -9,6 +9,7 @@ import TeachersPage from './pages/TeachersPage';
 import PartnersPage from './pages/PartnersPage';
 import EnrollmentPage from './pages/EnrollmentPage';
 import ReportsPage from './pages/ReportsPage';
+import UsersPage from './pages/UsersPage';
 import LoginPage from './pages/LoginPage';
 import { DataProvider } from './hooks/useData';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -35,6 +36,7 @@ const AppContent = () => {
         <Route path="/parceiros" element={<PartnersPage />} />
         <Route path="/enturmacao" element={<EnrollmentPage />} />
         <Route path="/relatorios" element={<ReportsPage />} />
+        <Route path="/usuarios" element={<UsersPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
@@ -43,11 +45,11 @@ const AppContent = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <DataProvider>
+    <DataProvider>
+      <AuthProvider>
         <AppContent />
-      </DataProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </DataProvider>
   );
 }
 

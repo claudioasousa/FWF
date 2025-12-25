@@ -2,7 +2,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { HomeIcon, UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, ClipboardListIcon, FileDownIcon, XIcon } from './Icons';
+import { HomeIcon, UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, ClipboardListIcon, FileDownIcon, ShieldIcon, XIcon } from './Icons';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -20,6 +20,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { to: '/parceiros', text: 'Parceiros', icon: <BriefcaseIcon className="h-5 w-5" />, show: true },
     { to: '/enturmacao', text: 'Enturmação', icon: <ClipboardListIcon className="h-5 w-5" />, show: isAdmin },
     { to: '/relatorios', text: 'Relatórios', icon: <FileDownIcon className="h-5 w-5" />, show: true },
+    { to: '/usuarios', text: 'Gestão de Acesso', icon: <ShieldIcon className="h-5 w-5" />, show: isAdmin },
   ];
 
   return (
