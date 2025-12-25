@@ -66,21 +66,24 @@ const CourseForm = ({ course, onSave, onCancel }: CourseFormProps) => {
     onSave();
   };
 
+  const labelClass = "block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight";
+  const inputClass = "w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-            <label className="block text-xs font-black text-gray-400 uppercase mb-1.5 ml-1">Identificação do Curso</label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl dark:bg-gray-800 outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="Ex: Informática Básica"/>
+            <label className={labelClass}>Nome do Curso</label>
+            <input type="text" name="name" value={formData.name} onChange={handleChange} required className={inputClass} placeholder="Ex: Informática para Negócios" />
         </div>
         
         <div className="grid grid-cols-2 gap-4">
           <div>
-              <label className="block text-xs font-black text-gray-400 uppercase mb-1.5 ml-1">Carga Horária (h)</label>
-              <input type="number" name="workload" value={formData.workload} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl dark:bg-gray-800 outline-none focus:ring-2 focus:ring-blue-500 font-bold"/>
+              <label className={labelClass}>Carga Horária (h)</label>
+              <input type="number" name="workload" value={formData.workload} onChange={handleChange} required className={inputClass} />
           </div>
           <div>
-              <label className="block text-xs font-black text-gray-400 uppercase mb-1.5 ml-1">Estado Atual</label>
-              <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl dark:bg-gray-800 outline-none focus:ring-2 focus:ring-blue-500 font-bold">
+              <label className={labelClass}>Status</label>
+              <select name="status" value={formData.status} onChange={handleChange} className={inputClass}>
                   <option value="Ativo">🟢 Ativo</option>
                   <option value="Inativo">🔴 Inativo</option>
                   <option value="Concluído">🔵 Concluído</option>
@@ -90,35 +93,35 @@ const CourseForm = ({ course, onSave, onCancel }: CourseFormProps) => {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-              <label className="block text-xs font-black text-gray-400 uppercase mb-1.5 ml-1">Turno</label>
-              <select name="period" value={formData.period} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl dark:bg-gray-800 outline-none focus:ring-2 focus:ring-blue-500 font-bold">
+              <label className={labelClass}>Turno</label>
+              <select name="period" value={formData.period} onChange={handleChange} className={inputClass}>
                   <option value="Manhã">🌅 Manhã</option>
                   <option value="Tarde">☀️ Tarde</option>
                   <option value="Noite">🌙 Noite</option>
               </select>
           </div>
           <div>
-              <label className="block text-xs font-black text-gray-400 uppercase mb-1.5 ml-1">Início das Aulas</label>
-              <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl dark:bg-gray-800 outline-none focus:ring-2 focus:ring-blue-500 font-bold"/>
+              <label className={labelClass}>Início previsto</label>
+              <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required className={inputClass} />
           </div>
         </div>
 
         <div>
-            <label className="block text-xs font-black text-gray-400 uppercase mb-1.5 ml-1">Local da Oferta</label>
-            <input type="text" name="location" value={formData.location} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl dark:bg-gray-800 outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="Ex: Sala 02 ou Polo Virtual"/>
+            <label className={labelClass}>Local ou Polo</label>
+            <input type="text" name="location" value={formData.location} onChange={handleChange} required className={inputClass} placeholder="Ex: Sala 02 ou Unidade Centro" />
         </div>
 
         <div>
-            <label className="block text-xs font-black text-gray-400 uppercase mb-1.5 ml-1">Parceiro Estratégico</label>
-            <select name="partnerId" value={formData.partnerId} onChange={handleChange} className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl dark:bg-gray-800 outline-none focus:ring-2 focus:ring-blue-500 font-bold">
-                <option value="">Sem Patrocínio Direto</option>
+            <label className={labelClass}>Parceiro Estratégico</label>
+            <select name="partnerId" value={formData.partnerId} onChange={handleChange} className={inputClass}>
+                <option value="">Sem patrocínio direto</option>
                 {partners.map(p => <option key={p.id} value={p.id}>{p.companyName}</option>)}
             </select>
         </div>
 
         <div>
-            <label className="block text-xs font-black text-gray-400 uppercase mb-2 ml-1">Atribuir Docentes</label>
-            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden max-h-40 overflow-y-auto bg-gray-50/50 dark:bg-gray-900/50">
+            <label className={labelClass}>Corpo Docente Atribuído</label>
+            <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden max-h-32 overflow-y-auto bg-gray-50/50 dark:bg-gray-900/50 custom-scrollbar">
                 {teachers.length > 0 ? teachers.map(t => (
                     <label key={t.id} className="flex items-center px-4 py-2 hover:bg-white dark:hover:bg-gray-800 transition-colors cursor-pointer border-b last:border-b-0 border-gray-100 dark:border-gray-700">
                         <input 
@@ -127,20 +130,20 @@ const CourseForm = ({ course, onSave, onCancel }: CourseFormProps) => {
                             onChange={() => toggleTeacher(t.id)}
                             className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mr-3"
                         />
-                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{t.name}</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.name}</span>
                     </label>
                 )) : (
-                    <p className="p-4 text-xs text-center text-gray-400 italic">Cadastre professores primeiro.</p>
+                    <p className="p-4 text-xs text-center text-gray-400 font-bold uppercase italic">Nenhum professor cadastrado.</p>
                 )}
             </div>
         </div>
 
-        <div className="flex justify-end space-x-3 mt-8 pt-6 border-t dark:border-gray-700">
-            <button type="button" onClick={onCancel} className="px-6 py-2.5 font-bold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">Cancelar</button>
-            <button type="submit" className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-xl shadow-xl shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all">
-                {course ? 'Salvar Alterações' : 'Criar Curso'}
-            </button>
-        </div>
+      <div className="flex justify-end space-x-3 mt-8 border-t dark:border-gray-700 pt-6">
+        <button type="button" onClick={onCancel} className="px-6 py-2.5 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all">Cancelar</button>
+        <button type="submit" className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95">
+          {course ? 'Salvar Alterações' : 'Criar Novo Curso'}
+        </button>
+      </div>
     </form>
   );
 };

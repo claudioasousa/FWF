@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useData } from '../../hooks/useData';
 import type { Student, Course } from '../../types';
@@ -30,7 +29,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
       setFormData({
         name: student.name,
         cpf: formatCPF(student.cpf),
-        contact: student.contact,
+        contact: formatPhone(student.contact),
         birthDate: student.birthDate,
         address: student.address,
         courseId: student.courseId,
@@ -46,7 +45,21 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-      .replace(/(-\d{2})\d+?$/, '$1');
+      .slice(0, 14);
+  }
+
+  function formatPhone(value: string) {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 10) {
+      return digits
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{4})(\d)/, '$1-$2')
+        .slice(0, 14);
+    }
+    return digits
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .slice(0, 15);
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -55,6 +68,8 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
     
     if (name === 'cpf') {
       setFormData(prev => ({ ...prev, [name]: formatCPF(value) }));
+    } else if (name === 'contact') {
+      setFormData(prev => ({ ...prev, [name]: formatPhone(value) }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -67,19 +82,22 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
       return false;
     }
 
+    const cleanPhone = formData.contact.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setError('Telefone inválido. Informe o DDD e o número.');
+      return false;
+    }
+
     if (!formData.courseId) return true;
 
     const selectedCourse = courses.find(c => c.id === formData.courseId);
     if (!selectedCourse) return true;
 
-    // Busca conflitos: mesmo CPF em curso no mesmo período
     const conflict = students.find(s => {
       if (student && s.id === student.id) return false;
-      
       const sCleanCPF = s.cpf.replace(/\D/g, '');
       if (sCleanCPF === cleanCPF) {
         const otherCourse = courses.find(c => c.id === s.courseId);
-        // Se o outro curso for no mesmo período, gera conflito
         return otherCourse && otherCourse.period === selectedCourse.period;
       }
       return false;
@@ -100,7 +118,8 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
     const finalData = {
       ...formData,
-      cpf: formData.cpf.replace(/\D/g, '')
+      cpf: formData.cpf.replace(/\D/g, ''),
+      contact: formData.contact.replace(/\D/g, '')
     };
 
     if (student) {
@@ -114,7 +133,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 mb-4 animate-pulse">
+          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 mb-4">
             <p className="text-xs font-bold text-red-600 dark:text-red-400">{error}</p>
           </div>
         )}
@@ -134,36 +153,27 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                   onChange={handleChange} 
                   required 
                   placeholder="000.000.000-00"
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 outline-none transition-all dark:bg-gray-700 ${error?.includes('CPF') ? 'border-red-500 ring-red-200' : 'dark:border-gray-600 focus:ring-blue-500'}`} 
+                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
                 />
             </div>
             <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Nascimento</label>
-                <input type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} required className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" />
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Celular</label>
+                <input 
+                  type="text" 
+                  name="contact" 
+                  value={formData.contact} 
+                  onChange={handleChange} 
+                  required 
+                  placeholder="(00) 00000-0000"
+                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
+                />
             </div>
-        </div>
-
-        <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Curso</label>
-            <select name="courseId" value={formData.courseId} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all font-medium">
-                <option value="">Nenhum curso selecionado</option>
-                {courses.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} — {c.period}
-                  </option>
-                ))}
-            </select>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
             <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Letra da Turma</label>
-                <select name="class" value={formData.class} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all">
-                    <option value="">Sem Turma</option>
-                    {classOptions.map(letter => (
-                        <option key={letter} value={letter}>Turma {letter}</option>
-                    ))}
-                </select>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Nascimento</label>
+                <input type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} required className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" />
             </div>
             <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Situação</label>
@@ -174,6 +184,28 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                     <option value="DESISTENTE">Desistente</option>
                 </select>
             </div>
+        </div>
+
+        <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Endereço</label>
+            <input type="text" name="address" value={formData.address} onChange={handleChange} required className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" placeholder="Rua, número, bairro" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-1">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Curso</label>
+              <select name="courseId" value={formData.courseId} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all font-medium">
+                  <option value="">Nenhum curso</option>
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+          </div>
+          <div className="col-span-1">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Letra da Turma</label>
+              <select name="class" value={formData.class} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all">
+                  <option value="">-</option>
+                  {classOptions.map(letter => <option key={letter} value={letter}>Turma {letter}</option>)}
+              </select>
+          </div>
         </div>
 
       <div className="flex justify-end space-x-3 mt-8 border-t dark:border-gray-700 pt-6">

@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import { UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, PlusIcon, ClipboardListIcon } from '../components/Icons';
@@ -27,7 +26,7 @@ const StatCard = ({ title, value, icon, color, trend }: { title: string; value: 
 );
 
 const QuickAction = ({ to, label, icon, bg }: { to: string; label: string; icon: React.ReactNode; bg: string }) => (
-    <NavLink to={to} className={`${bg} p-5 rounded-3xl flex items-center justify-between group hover:shadow-2xl transition-all text-white relative overflow-hidden active:scale-95`}>
+    <NavLink to={to} className={`${bg} p-6 rounded-3xl flex items-center justify-between group hover:shadow-2xl transition-all text-white relative overflow-hidden active:scale-95`}>
         <span className="font-black text-sm uppercase tracking-wider relative z-10">{label}</span>
         <div className="p-3 bg-white/20 rounded-2xl group-hover:rotate-12 transition-transform relative z-10">
             {icon}
@@ -49,103 +48,101 @@ const Dashboard = () => {
     }, [students]);
 
     const recentStudents = useMemo(() => {
-        return [...students].reverse().slice(0, 4);
+        return [...students].reverse().slice(0, 5);
     }, [students]);
 
     return (
         <div className="animate-fadeIn max-w-7xl mx-auto space-y-10 pb-10">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
-                    <span className="text-blue-600 font-black text-xs uppercase tracking-widest mb-2 block">Painel Geral</span>
-                    <h1 className="text-6xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">Visão Global</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-4 text-lg font-medium max-w-lg">Métricas estratégicas e controle operacional da sua rede de ensino em tempo real.</p>
+                    <h1 className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">Painel de Gestão</h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-3 text-lg font-medium">Controle operacional e métricas em tempo real.</p>
                 </div>
                 <div className="flex gap-3">
                     <div className="px-5 py-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-3"></div>
-                        <span className="text-[10px] font-black uppercase text-gray-400">Sistema Online</span>
+                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Servidor Ativo</span>
                     </div>
                 </div>
             </header>
 
             {/* ATALHOS RÁPIDOS */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <QuickAction to="/alunos" label="Matrícula Rápida" icon={<PlusIcon className="h-6 w-6" />} bg="bg-blue-600 shadow-blue-500/20" />
-                <QuickAction to="/cursos" label="Nova Oferta" icon={<BookOpenIcon className="h-6 w-6" />} bg="bg-indigo-600 shadow-indigo-500/20" />
-                <QuickAction to="/relatorios" label="Painel PDF" icon={<ClipboardListIcon className="h-6 w-6" />} bg="bg-emerald-600 shadow-emerald-500/20" />
+                <QuickAction to="/alunos" label="Nova Matrícula" icon={<PlusIcon className="h-6 w-6" />} bg="bg-blue-600" />
+                <QuickAction to="/cursos" label="Gerenciar Oferta" icon={<BookOpenIcon className="h-6 w-6" />} bg="bg-indigo-600" />
+                <QuickAction to="/relatorios" label="Extrair PDF" icon={<ClipboardListIcon className="h-6 w-6" />} bg="bg-emerald-600" />
             </div>
 
             {/* CARDS PRINCIPAIS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <StatCard title="Estudantes" value={students.length} icon={<UsersIcon className="h-8 w-8 text-blue-600" />} color="blue" trend="12" />
-                <StatCard title="Cursos Ativos" value={courses.length} icon={<BookOpenIcon className="h-8 w-8 text-indigo-600" />} color="indigo" />
-                <StatCard title="Corpo Docente" value={teachers.length} icon={<UserCheckIcon className="h-8 w-8 text-amber-600" />} color="amber" />
-                <StatCard title="Patrocínios" value={partners.length} icon={<BriefcaseIcon className="h-8 w-8 text-emerald-600" />} color="emerald" trend="5" />
+                <StatCard title="Total de Alunos" value={students.length} icon={<UsersIcon className="h-8 w-8 text-blue-600" />} color="blue" trend="8" />
+                <StatCard title="Cursos Ativos" value={courses.filter(c => c.status === 'Ativo').length} icon={<BookOpenIcon className="h-8 w-8 text-indigo-600" />} color="indigo" />
+                <StatCard title="Professores" value={teachers.length} icon={<UserCheckIcon className="h-8 w-8 text-amber-600" />} color="amber" />
+                <StatCard title="Patrocínios" value={partners.length} icon={<BriefcaseIcon className="h-8 w-8 text-emerald-600" />} color="emerald" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 {/* PERFORMANCE ACADÊMICA */}
                 <div className="lg:col-span-2 space-y-10">
-                    <div className="bg-white dark:bg-gray-800 p-12 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
-                        <h2 className="text-3xl font-black mb-10 tracking-tight">Performance Acadêmica</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 relative z-10">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase text-blue-400 mb-2">Engajados</span>
-                                <span className="text-4xl font-black text-blue-600 dark:text-blue-400">{studentStats.cursando}</span>
-                                <div className="mt-4 h-1.5 w-full bg-blue-50 dark:bg-blue-900/30 rounded-full overflow-hidden">
-                                    <div className="h-full bg-blue-600" style={{ width: `${(studentStats.cursando/students.length)*100}%` }}></div>
-                                </div>
+                    <div className="bg-white dark:bg-gray-800 p-10 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700">
+                        <h2 className="text-2xl font-black mb-8 tracking-tight">Performance Acadêmica</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl">
+                                <p className="text-[10px] font-black uppercase text-blue-400 mb-1">Engajados</p>
+                                <p className="text-3xl font-black text-blue-600 dark:text-blue-400">{studentStats.cursando}</p>
                             </div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase text-emerald-400 mb-2">Sucesso (Graduados)</span>
-                                <span className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{studentStats.concluidos}</span>
-                                <div className="mt-4 h-1.5 w-full bg-emerald-50 dark:border-emerald-900/30 rounded-full overflow-hidden">
-                                    <div className="h-full bg-emerald-500" style={{ width: `${studentStats.aproveitamento}%` }}></div>
-                                </div>
+                            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl">
+                                <p className="text-[10px] font-black uppercase text-emerald-400 mb-1">Graduados</p>
+                                <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{studentStats.concluidos}</p>
                             </div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase text-rose-400 mb-2">Evasão</span>
-                                <span className="text-4xl font-black text-rose-600 dark:text-rose-400">{studentStats.evasao}</span>
-                                <div className="mt-4 h-1.5 w-full bg-rose-50 dark:bg-rose-900/30 rounded-full overflow-hidden">
-                                    <div className="h-full bg-rose-500" style={{ width: `${(studentStats.evasao/students.length)*100}%` }}></div>
-                                </div>
+                            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl">
+                                <p className="text-[10px] font-black uppercase text-rose-400 mb-1">Evasão</p>
+                                <p className="text-3xl font-black text-rose-600 dark:text-rose-400">{studentStats.evasao}</p>
                             </div>
                         </div>
-                        <div className="absolute -right-20 -top-20 text-[240px] font-black italic text-gray-100 dark:text-gray-900/20 select-none pointer-events-none group-hover:-translate-x-10 transition-transform duration-1000">DATA</div>
+                        <div className="mt-8">
+                            <div className="flex justify-between items-end mb-2">
+                                <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Taxa de Sucesso</span>
+                                <span className="text-xl font-black text-emerald-500">{studentStats.aproveitamento}%</span>
+                            </div>
+                            <div className="h-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${studentStats.aproveitamento}%` }}></div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-950 p-12 rounded-[48px] shadow-2xl shadow-blue-500/30 text-white flex flex-col md:flex-row items-center justify-between gap-8 group">
-                        <div className="max-w-md">
-                            <h2 className="text-4xl font-black mb-4 tracking-tighter leading-tight">Expansão de Portfolio 2025</h2>
-                            <p className="text-blue-200 font-medium">Novos editais de parcerias corporativas abertos para planejamento do segundo semestre.</p>
-                            <button className="mt-10 bg-white text-blue-900 px-10 py-4 rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-blue-50 transition-all active:scale-95">Explorar Parceiros</button>
+                    <div className="bg-gradient-to-br from-blue-700 to-indigo-900 p-10 rounded-[48px] text-white flex items-center justify-between group overflow-hidden relative shadow-2xl shadow-blue-500/20">
+                        <div className="relative z-10">
+                            <h2 className="text-3xl font-black mb-2 tracking-tighter">Expansão 2025</h2>
+                            <p className="text-blue-200 font-medium max-w-sm">Novas parcerias corporativas abertas para o próximo semestre letivo.</p>
+                            <button className="mt-6 bg-white text-blue-900 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-50 transition-all active:scale-95">Ver Parceiros</button>
                         </div>
-                        <div className="text-9xl group-hover:rotate-12 group-hover:scale-110 transition-transform duration-700">🏢</div>
+                        <div className="text-9xl opacity-20 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-700">🏢</div>
                     </div>
                 </div>
 
                 {/* ÚLTIMOS INGRESSOS */}
-                <div className="bg-white dark:bg-gray-800 p-12 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700">
-                    <h2 className="text-2xl font-black mb-10 flex items-center">
+                <div className="bg-white dark:bg-gray-800 p-10 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h2 className="text-2xl font-black mb-8 flex items-center">
                         <span className="w-2 h-2 rounded-full bg-blue-500 mr-3 animate-ping"></span>
-                        Novos Alunos
+                        Novas Matrículas
                     </h2>
-                    <div className="space-y-10">
+                    <div className="space-y-6">
                         {recentStudents.length > 0 ? recentStudents.map(s => (
-                            <div key={s.id} className="flex items-center gap-6 group">
-                                <div className="w-14 h-14 rounded-3xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center font-black text-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
+                            <div key={s.id} className="flex items-center gap-4 group">
+                                <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center font-black text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
                                     {s.name.charAt(0)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition-colors leading-tight">{s.name}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{s.status}</p>
+                                    <p className="text-sm font-black text-gray-900 dark:text-white truncate leading-tight">{s.name}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{s.status}</p>
                                 </div>
                             </div>
                         )) : (
-                            <div className="text-center py-20 text-gray-300 font-black uppercase tracking-tighter">Sem registros</div>
+                            <div className="text-center py-10 text-gray-300 font-black uppercase text-xs tracking-tighter">Vazio</div>
                         )}
                     </div>
-                    <NavLink to="/alunos" className="mt-14 w-full py-5 bg-gray-50 dark:bg-gray-900/50 rounded-3xl text-[10px] font-black text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all text-center block uppercase tracking-widest">Acessar Listagem Completa</NavLink>
+                    <NavLink to="/alunos" className="mt-10 w-full py-4 bg-gray-50 dark:bg-gray-900 rounded-2xl text-[10px] font-black text-gray-400 hover:text-blue-600 transition-all text-center block uppercase tracking-widest">Listagem Completa</NavLink>
                 </div>
             </div>
         </div>
