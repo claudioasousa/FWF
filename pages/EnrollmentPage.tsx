@@ -49,7 +49,7 @@ const EnrollmentPage = () => {
         const targetCourse = courses.find(c => c.id === selectedCourseId);
         if (!targetCourse) return;
 
-        // Check if student (CPF) has a course in the same turn/period with overlapping dates
+        // REGRA: Um estudante pode estar em vários cursos APENAS se os turnos forem diferentes.
         const cleanCPF = student.cpf.replace(/\D/g, '');
         const conflict = students.find(s => {
             if (s.id === student.id) return false;
@@ -57,11 +57,9 @@ const EnrollmentPage = () => {
             const sCleanCPF = s.cpf.replace(/\D/g, '');
             if (sCleanCPF === cleanCPF && s.courseId) {
                 const otherCourse = courses.find(c => c.id === s.courseId);
+                // Bloqueia se o turno for idêntico
                 if (otherCourse && otherCourse.period === targetCourse.period) {
-                    // Date overlap check
-                    const overlap = (targetCourse.startDate <= otherCourse.endDate) && 
-                                    (otherCourse.startDate <= targetCourse.endDate);
-                    return overlap;
+                    return true;
                 }
             }
             return false;
@@ -69,7 +67,7 @@ const EnrollmentPage = () => {
 
         if (conflict) {
             const conflictCourse = courses.find(c => c.id === conflict.courseId);
-            alert(`Conflito de Horário: Este aluno já está matriculado no curso "${conflictCourse?.name}" no mesmo turno (${targetCourse.period}) com datas coincidentes.`);
+            alert(`Conflito de Turno: O aluno ${student.name} já está matriculado no curso "${conflictCourse?.name}" no período da ${targetCourse.period}. Matrículas simultâneas são permitidas apenas em turnos diferentes.`);
             return;
         }
 
@@ -108,7 +106,7 @@ const EnrollmentPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                 {/* DISPONÍVEIS */}
                 <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <h2 className="text-xl font-black mb-6">Disponíveis</h2>
+                    <h2 className="text-xl font-black mb-6">Disponíveis / Outros Cursos</h2>
                     <input 
                         type="text" 
                         placeholder="Filtrar por nome ou CPF..." 
@@ -131,13 +129,13 @@ const EnrollmentPage = () => {
                                     Matricular
                                 </button>
                             </li>
-                        )) : <p className="text-center text-gray-400 py-10">Nenhum aluno encontrado.</p>}
+                        )) : <p className="text-center text-gray-400 py-10">Nenhum aluno disponível para este turno.</p>}
                     </ul>
                 </div>
 
                 {/* MATRICULADOS */}
                 <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <h2 className="text-xl font-black mb-6">Neste Curso</h2>
+                    <h2 className="text-xl font-black mb-6">Alunos da Turma</h2>
                     <input 
                         type="text" 
                         placeholder="Filtrar nesta turma..." 

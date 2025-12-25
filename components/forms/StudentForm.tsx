@@ -100,18 +100,17 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
     const selectedCourse = courses.find(c => c.id === formData.courseId);
     if (!selectedCourse) return true;
 
-    // Rule: Student cannot be in courses with overlapping dates in the same period (turn)
+    // REGRA ATUALIZADA: Um estudante pode estar em vários cursos APENAS se os turnos forem diferentes.
     const conflict = students.find(s => {
+      // Ignorar o próprio registro se estiver editando
       if (student && s.id === student.id) return false;
       
       const sCleanCPF = s.cpf.replace(/\D/g, '');
       if (sCleanCPF === cleanCPF && s.courseId) {
         const otherCourse = courses.find(c => c.id === s.courseId);
+        // Se o turno for o mesmo, bloqueia.
         if (otherCourse && otherCourse.period === selectedCourse.period) {
-           // Overlap: (StartA <= EndB) && (StartB <= EndA)
-           const overlap = (selectedCourse.startDate <= otherCourse.endDate) && 
-                           (otherCourse.startDate <= selectedCourse.endDate);
-           return overlap;
+           return true;
         }
       }
       return false;
@@ -119,7 +118,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
     if (conflict) {
       const conflictCourse = courses.find(c => c.id === conflict.courseId);
-      setError(`Conflito: Este aluno já está matriculado no curso "${conflictCourse?.name}" no mesmo turno (${selectedCourse.period}) com datas que se sobrepõem.`);
+      setError(`Conflito de Turno: Este aluno já possui uma matrícula no turno ${selectedCourse.period} (Curso: ${conflictCourse?.name}). Para matricular em um novo curso, este deve ser em um turno diferente.`);
       return false;
     }
 
@@ -148,7 +147,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 mb-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 mb-4 animate-fadeIn">
             <p className="text-xs font-bold text-red-600 dark:text-red-400">{error}</p>
           </div>
         )}
@@ -262,7 +261,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                 className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all font-medium ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`}
               >
                   <option value="">Nenhum curso</option>
-                  {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.period})</option>)}
               </select>
           </div>
           <div className="col-span-1">
