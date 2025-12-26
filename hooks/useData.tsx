@@ -67,8 +67,34 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     }
   };
 
+  const ensureAdminUser = async () => {
+    try {
+      const { data: existingUser, error } = await supabase
+        .from('users')
+        .select('username')
+        .eq('username', 'claudio')
+        .maybeSingle();
+
+      if (!existingUser && !error) {
+        await supabase.from('users').insert([{
+          name: 'Claudio',
+          username: 'claudio',
+          password: 'qwe123',
+          role: 'ADMIN'
+        }]);
+        await fetchData();
+      }
+    } catch (err) {
+      console.error('Falha ao verificar/criar usuário admin padrão:', err);
+    }
+  };
+
   useEffect(() => {
-    fetchData();
+    const init = async () => {
+      await fetchData();
+      await ensureAdminUser();
+    };
+    init();
   }, []);
 
   const refreshData = async () => fetchData();
