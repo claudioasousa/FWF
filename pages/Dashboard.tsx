@@ -35,7 +35,6 @@ const QuickAction = ({ to, label, icon, bg }: { to: string; label: string; icon:
         <div className="p-3 bg-white/20 rounded-2xl group-hover:rotate-12 transition-transform relative z-10">
             {icon}
         </div>
-        <div className="absolute inset-0 bg-black/10 translate-y-full group-hover:translate-y-0 transition-transform"></div>
     </NavLink>
 );
 
@@ -79,7 +78,7 @@ const Dashboard = () => {
                         onClick={() => setIsHealthModalOpen(true)}
                         className={`px-5 py-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border ${connectionOk ? 'border-emerald-100' : 'border-rose-100'} flex items-center transition-all hover:scale-105`}
                     >
-                        <div className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500 animate-bounce' : (connectionOk ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse')} mr-3`}></div>
+                        <div className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500 animate-bounce' : (connectionOk ? 'bg-emerald-500' : 'bg-rose-500')} mr-3`}></div>
                         <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
                             {loading ? 'Sincronizando...' : (connectionOk ? 'Sistema Online' : 'Atenção Necessária')}
                         </span>
@@ -87,56 +86,48 @@ const Dashboard = () => {
                 </div>
             </header>
 
-            {/* ATALHOS RÁPIDOS */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <QuickAction to="/alunos" label="Nova Matrícula" icon={<PlusIcon className="h-6 w-6" />} bg="bg-blue-600" />
                 <QuickAction to="/cursos" label="Gerenciar Oferta" icon={<BookOpenIcon className="h-6 w-6" />} bg="bg-indigo-600" />
                 <QuickAction to="/relatorios" label="Extrair PDF" icon={<ClipboardListIcon className="h-6 w-6" />} bg="bg-emerald-600" />
             </div>
 
-            {/* CARDS PRINCIPAIS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <StatCard title="Total de Alunos" value={students.length} icon={<UsersIcon className="h-8 w-8 text-blue-600" />} color="blue" trend="8" />
+                <StatCard title="Total de Alunos" value={students.length} icon={<UsersIcon className="h-8 w-8 text-blue-600" />} color="blue" />
                 <StatCard title="Cursos Ativos" value={courses.filter(c => c.status === 'Ativo').length} icon={<BookOpenIcon className="h-8 w-8 text-indigo-600" />} color="indigo" />
                 <StatCard title="Professores" value={teachers.length} icon={<UserCheckIcon className="h-8 w-8 text-amber-600" />} color="amber" />
                 <StatCard title="Patrocínios" value={partners.length} icon={<BriefcaseIcon className="h-8 w-8 text-emerald-600" />} color="emerald" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                {/* PERFORMANCE ACADÊMICA */}
                 <div className="lg:col-span-2 space-y-10">
                     <div className="bg-white dark:bg-gray-800 p-10 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700">
-                        <h2 className="text-2xl font-black mb-8 tracking-tight">Performance Acadêmica</h2>
+                        <h2 className="text-2xl font-black mb-8 tracking-tight">Status Acadêmico</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
                             <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl">
-                                <p className="text-[10px] font-black uppercase text-blue-400 mb-1">Engajados</p>
-                                <p className="text-3xl font-black text-blue-600 dark:text-blue-400">{studentStats.cursando}</p>
+                                <p className="text-[10px] font-black uppercase text-blue-400 mb-1">Cursando</p>
+                                <p className="text-3xl font-black text-blue-600">{studentStats.cursando}</p>
                             </div>
                             <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl">
-                                <p className="text-[10px] font-black uppercase text-emerald-400 mb-1">Graduados</p>
-                                <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{studentStats.concluidos}</p>
+                                <p className="text-[10px] font-black uppercase text-emerald-400 mb-1">Aprovados</p>
+                                <p className="text-3xl font-black text-emerald-600">{studentStats.concluidos}</p>
                             </div>
                             <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl">
                                 <p className="text-[10px] font-black uppercase text-rose-400 mb-1">Evasão</p>
-                                <p className="text-3xl font-black text-rose-600 dark:text-rose-400">{studentStats.evasao}</p>
+                                <p className="text-3xl font-black text-rose-600">{studentStats.evasao}</p>
                             </div>
                         </div>
                     </div>
 
                     {isAdmin && (
                         <div className="bg-white dark:bg-gray-800 p-10 rounded-[48px] shadow-sm border border-dashed border-blue-200 dark:border-blue-900/50 flex flex-col md:flex-row items-center justify-between gap-6">
-                            <div className="flex items-center gap-6">
-                                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-3xl flex items-center justify-center text-blue-600">
-                                    <ShieldIcon className="h-8 w-8" />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-black dark:text-white">Infraestrutura Supabase</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Exporte e configure as tabelas do banco de dados.</p>
-                                </div>
+                            <div>
+                                <h3 className="text-xl font-black dark:text-white">Supabase Schema</h3>
+                                <p className="text-sm text-gray-500">Exporte a estrutura do banco de dados.</p>
                             </div>
                             <button 
                                 onClick={() => setIsSchemaModalOpen(true)}
-                                className="px-8 py-4 bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-gray-500/10"
+                                className="px-8 py-4 bg-gray-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all"
                             >
                                 Gerar Script SQL
                             </button>
@@ -144,79 +135,53 @@ const Dashboard = () => {
                     )}
                 </div>
 
-                {/* ÚLTIMOS INGRESSOS */}
                 <div className="bg-white dark:bg-gray-800 p-10 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700">
-                    <h2 className="text-2xl font-black mb-8 flex items-center">
-                        <span className="w-2 h-2 rounded-full bg-blue-500 mr-3 animate-ping"></span>
-                        Novas Matrículas
-                    </h2>
+                    <h2 className="text-2xl font-black mb-8">Novas Matrículas</h2>
                     <div className="space-y-6">
-                        {recentStudents.length > 0 ? recentStudents.map(s => (
+                        {recentStudents.map(s => (
                             <div key={s.id} className="flex items-center gap-4 group">
                                 <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center font-black text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
                                     {s.name.charAt(0)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-black text-gray-900 dark:text-white truncate leading-tight">{s.name}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{s.status}</p>
+                                    <p className="text-sm font-black text-gray-900 dark:text-white truncate">{s.name}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase">{s.status}</p>
                                 </div>
                             </div>
-                        )) : (
-                            <div className="text-center py-10 text-gray-300 font-black uppercase text-xs tracking-tighter">
-                                {loading ? 'Carregando...' : 'Nenhuma matrícula'}
-                            </div>
-                        )}
+                        ))}
                     </div>
                 </div>
             </div>
 
-            {/* MODAL SCHEMA */}
-            <Modal isOpen={isSchemaModalOpen} onClose={() => setIsSchemaModalOpen(false)} title="Exportar Schema para Supabase">
-                <div className="space-y-6">
-                    <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/50">
-                        <p className="text-xs text-amber-800 dark:text-amber-400 font-bold leading-relaxed">
-                            <span className="text-lg mr-2">⚠️</span>
-                            <strong>COMO USAR:</strong> Copie o código abaixo clicando no botão verde. Vá ao seu Supabase, abra o <strong>SQL Editor</strong>, cole e clique em <strong>RUN</strong>. 
-                            <br/><br/>
-                            <span className="underline">Não copie</span> o código TypeScript (como "export const...") manualmente da lista de arquivos, use apenas o botão de cópia abaixo.
-                        </p>
-                    </div>
-                    
-                    <div className="relative group">
+            <Modal isOpen={isSchemaModalOpen} onClose={() => setIsSchemaModalOpen(false)} title="Exportar Schema">
+                <div className="space-y-4">
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
+                        Copie e execute este código no SQL Editor do seu projeto Supabase.
+                    </p>
+                    <div className="relative">
                         <pre className="bg-gray-900 text-blue-400 p-6 rounded-2xl text-[10px] font-mono overflow-x-auto max-h-[300px] custom-scrollbar border border-gray-800">
                             {DATABASE_SCHEMA_SQL}
                         </pre>
                         <button 
                             onClick={handleCopySQL}
-                            className={`absolute top-4 right-4 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${copySuccess ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                            className={`absolute top-4 right-4 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copySuccess ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                         >
-                            {copySuccess ? 'Copiado com Sucesso!' : 'Copiar Script SQL'}
+                            {copySuccess ? 'Copiado!' : 'Copiar SQL'}
                         </button>
                     </div>
                 </div>
             </Modal>
 
-            {/* MODAL SAÚDE DO SISTEMA */}
-            <Modal isOpen={isHealthModalOpen} onClose={() => setIsHealthModalOpen(false)} title="Diagnóstico de Conexão">
-                <div className="space-y-6">
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-4">Status das Tabelas</p>
-                    <div className="space-y-3">
-                        {tableStatuses.map(status => (
-                            <div key={status.name} className={`p-4 rounded-2xl border flex items-center justify-between ${status.ok ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-rose-50 border-rose-100 text-rose-700'}`}>
-                                <div className="flex items-center gap-3">
-                                    <span className="font-black text-sm uppercase">{status.name}</span>
-                                </div>
-                                <span className="text-[10px] font-black uppercase px-2 py-1 bg-white/50 rounded-lg">
-                                    {status.ok ? 'Conectado' : 'Falhou'}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                    {!connectionOk && (
-                        <div className="bg-rose-100 p-4 rounded-2xl text-rose-800 text-xs font-bold leading-relaxed">
-                            ⚠️ Uma ou mais tabelas não estão respondendo. Isso ocorre porque o script SQL não foi executado ou o RLS está bloqueando o acesso. Vá em "Gerar Script SQL" e execute o código no seu Supabase.
+            <Modal isOpen={isHealthModalOpen} onClose={() => setIsHealthModalOpen(false)} title="Status da Conexão">
+                <div className="space-y-3">
+                    {tableStatuses.map(status => (
+                        <div key={status.name} className={`p-4 rounded-2xl border flex items-center justify-between ${status.ok ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-rose-50 border-rose-100 text-rose-700'}`}>
+                            <span className="font-black text-sm uppercase">{status.name}</span>
+                            <span className="text-[10px] font-black uppercase px-2 py-1 bg-white/50 rounded-lg">
+                                {status.ok ? 'Online' : 'Erro'}
+                            </span>
                         </div>
-                    )}
+                    ))}
                 </div>
             </Modal>
         </div>

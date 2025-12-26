@@ -2,8 +2,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '../hooks/useTheme';
-import { HomeIcon, UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, ClipboardListIcon, FileDownIcon, ShieldIcon, XIcon, SunIcon, MoonIcon } from './Icons';
+import { HomeIcon, UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, ClipboardListIcon, FileDownIcon, ShieldIcon, XIcon } from './Icons';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -12,7 +11,6 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const { user, logout, isAdmin } = useAuth();
-  const { theme, toggleTheme } = useTheme();
 
   const navItems = [
     { to: '/', text: 'Dashboard', icon: <HomeIcon className="h-5 w-5" />, show: true },
@@ -35,7 +33,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       <aside className={`
         fixed inset-y-0 left-0 z-[55] w-72 bg-white dark:bg-gray-800 
         flex-shrink-0 flex flex-col h-full border-r border-gray-100 dark:border-gray-700
-        transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) lg:static lg:translate-x-0
+        transition-all duration-500 lg:static lg:translate-x-0
         ${isOpen ? 'translate-x-0 shadow-3xl' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="p-8 flex justify-between items-center">
@@ -43,7 +41,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/20">G</div>
             <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tighter uppercase">Gestão</h1>
           </div>
-          <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-rose-500 transition-colors">
+          <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-rose-500">
             <XIcon className="h-6 w-6" />
           </button>
         </div>
@@ -62,27 +60,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 }`
               }
             >
-              {({ isActive }) => (
-                <>
-                  <span className={`transition-transform duration-300 group-hover:scale-110`}>{item.icon}</span>
-                  <span className="ml-4">{item.text}</span>
-                  <div className={`ml-auto w-1.5 h-1.5 rounded-full bg-white transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}></div>
-                </>
-              )}
+              <span className="transition-transform duration-300 group-hover:scale-110">{item.icon}</span>
+              <span className="ml-4">{item.text}</span>
             </NavLink>
           ))}
         </nav>
         
-        <div className="p-6 space-y-4">
-          {/* Theme Toggle Button */}
-          <button 
-            onClick={toggleTheme}
-            className="w-full flex items-center justify-between px-6 py-3 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 transition-all group"
-          >
-            <span className="text-[10px] font-black uppercase tracking-widest">Modo {theme === 'light' ? 'Escuro' : 'Claro'}</span>
-            {theme === 'light' ? <MoonIcon className="h-5 w-5 group-hover:rotate-12 transition-transform" /> : <SunIcon className="h-5 w-5 group-hover:rotate-90 transition-transform" />}
-          </button>
-
+        <div className="p-6">
           <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-700">
              <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-black text-[10px]">

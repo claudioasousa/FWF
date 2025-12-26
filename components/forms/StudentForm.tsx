@@ -26,8 +26,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
   });
 
   const isEnrolled = student && !!student.courseId;
-  // Regra: Bloquear apenas campos de enturmação para operadores se o aluno já estiver em um curso.
-  const isEnrollmentReadOnly = isEnrolled && !isAdmin;
+  const isReadOnly = isEnrolled && !isAdmin;
 
   const classOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
@@ -70,11 +69,9 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (isReadOnly) return;
     const { name, value } = e.target;
     setError(null);
-    
-    // Bloquear alteração se for campo restrito
-    if (isEnrollmentReadOnly && ['courseId', 'class', 'status'].includes(name)) return;
 
     if (name === 'cpf') {
       setFormData(prev => ({ ...prev, [name]: formatCPF(value) }));
@@ -92,15 +89,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
       return false;
     }
 
-    const cleanPhone = formData.contact.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      setError('Telefone inválido. Informe o DDD e o número.');
-      return false;
-    }
-
     if (!formData.courseId) return true;
-
-    // Se o curso não mudou (edição de outros campos), não precisa validar conflito de novo
     if (student && student.courseId === formData.courseId) return true;
 
     const selectedCourse = courses.find(c => c.id === formData.courseId);
@@ -108,7 +97,6 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
     const conflict = students.find(s => {
       if (student && s.id === student.id) return false;
-      
       const sCleanCPF = s.cpf.replace(/\D/g, '');
       if (sCleanCPF === cleanCPF && s.courseId) {
         const otherCourse = courses.find(c => c.id === s.courseId);
@@ -121,7 +109,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
     if (conflict) {
       const conflictCourse = courses.find(c => c.id === conflict.courseId);
-      setError(`Conflito de Turno: Este aluno já possui uma matrícula no turno ${selectedCourse.period} (Curso: ${conflictCourse?.name}).`);
+      setError(`Conflito: Este aluno já possui matrícula no turno ${selectedCourse.period} (${conflictCourse?.name}).`);
       return false;
     }
 
@@ -130,6 +118,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly) return;
     if (!validateEnrollment()) return;
 
     const finalData = {
@@ -149,82 +138,80 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 mb-4 animate-fadeIn">
+          <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 mb-4">
             <p className="text-xs font-bold text-red-600 dark:text-red-400">{error}</p>
           </div>
         )}
 
-        {isEnrollmentReadOnly && (
-          <div className="bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-500 p-3 mb-6">
-            <p className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-widest">
-              🔒 Vínculo Acadêmico Restrito
-            </p>
-            <p className="text-[9px] text-amber-600 dark:text-amber-500 font-bold">
-              Alterações de Curso/Turma exigem permissão de Administrador. Dados de contato podem ser editados.
+        {isReadOnly && (
+          <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-xl text-center">
+            <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">
+              🔒 Registro Bloqueado para Edição
             </p>
           </div>
         )}
 
         <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Nome Completo</label>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Nome Completo</label>
             <input 
               type="text" 
               name="name" 
               value={formData.name} 
               onChange={handleChange} 
               required 
-              className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
-              placeholder="Ex: João Silva" 
+              disabled={isReadOnly}
+              className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all disabled:opacity-50" 
             />
         </div>
         
         <div className="grid grid-cols-2 gap-4">
             <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">CPF</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">CPF</label>
                 <input 
                   type="text" 
                   name="cpf" 
                   value={formData.cpf} 
                   onChange={handleChange} 
                   required 
-                  placeholder="000.000.000-00"
-                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
+                  disabled={isReadOnly}
+                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all disabled:opacity-50" 
                 />
             </div>
             <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Celular</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Celular</label>
                 <input 
                   type="text" 
                   name="contact" 
                   value={formData.contact} 
                   onChange={handleChange} 
                   required 
-                  placeholder="(00) 00000-0000"
-                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
+                  disabled={isReadOnly}
+                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all disabled:opacity-50" 
                 />
             </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
             <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Nascimento</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Nascimento</label>
                 <input 
                   type="date" 
                   name="birthDate" 
                   value={formData.birthDate} 
                   onChange={handleChange} 
                   required 
-                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
+                  disabled={isReadOnly}
+                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all disabled:opacity-50" 
                 />
             </div>
             <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Situação</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Situação</label>
                 <select 
                   name="status" 
                   value={formData.status} 
                   onChange={handleChange} 
-                  disabled={isEnrollmentReadOnly}
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isEnrollmentReadOnly ? 'opacity-70 bg-gray-50 dark:bg-gray-800' : ''}`}
+                  disabled={isReadOnly}
+                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all disabled:opacity-50"
                 >
                     <option value="CURSANDO">Cursando</option>
                     <option value="APROVADO">Aprovado</option>
@@ -234,55 +221,44 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
             </div>
         </div>
 
-        <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Endereço</label>
-            <input 
-              type="text" 
-              name="address" 
-              value={formData.address} 
-              onChange={handleChange} 
-              required 
-              className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
-              placeholder="Rua, número, bairro" 
-            />
-        </div>
-
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-1">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Curso</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Curso</label>
               <select 
                 name="courseId" 
                 value={formData.courseId} 
                 onChange={handleChange} 
-                disabled={isEnrollmentReadOnly}
-                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all font-medium ${isEnrollmentReadOnly ? 'opacity-70 bg-gray-50 dark:bg-gray-800' : ''}`}
+                disabled={isReadOnly}
+                className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all disabled:opacity-50"
               >
                   <option value="">Nenhum curso</option>
-                  {courses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.period})</option>)}
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
           </div>
           <div className="col-span-1">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-tight">Letra da Turma</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Turma</label>
               <select 
                 name="class" 
                 value={formData.class} 
                 onChange={handleChange} 
-                disabled={isEnrollmentReadOnly}
-                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isEnrollmentReadOnly ? 'opacity-70 bg-gray-50 dark:bg-gray-800' : ''}`}
+                disabled={isReadOnly}
+                className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all disabled:opacity-50"
               >
                   <option value="">-</option>
-                  {classOptions.map(letter => <option key={letter} value={letter}>Turma {letter}</option>)}
+                  {classOptions.map(letter => <option key={letter} value={letter}>{letter}</option>)}
               </select>
           </div>
         </div>
 
       <div className="flex justify-end space-x-3 mt-8 border-t dark:border-gray-700 pt-6">
         <button type="button" onClick={onCancel} className="px-6 py-2.5 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all">
-          Cancelar
+          Fechar
         </button>
-        <button type="submit" className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95">
-          {student ? 'Salvar Alterações' : 'Confirmar Matrícula'}
-        </button>
+        {!isReadOnly && (
+          <button type="submit" className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95">
+            Confirmar
+          </button>
+        )}
       </div>
     </form>
   );
