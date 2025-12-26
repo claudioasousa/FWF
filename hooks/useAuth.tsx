@@ -1,11 +1,11 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
-import { useData } from './useData';
+import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => boolean;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isAdmin: boolean;
 }
@@ -13,24 +13,30 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
-  const { users } = useData();
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('auth_session');
     return saved ? JSON.parse(saved) : null;
   });
 
-  const login = (username: string, password: string): boolean => {
-    const foundUser = users.find(
-      u => u.username.toLowerCase() === username.toLowerCase() && u.password === password
-    );
+  const login = async (username: string, password: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username.toLowerCase())
+        .eq('password', password)
+        .single();
 
-    if (foundUser) {
-      const { password: _, ...userSession } = foundUser; // Remove senha da sessão por segurança
+      if (error || !data) return false;
+
+      const { password: _, ...userSession } = data;
       setUser(userSession as User);
       localStorage.setItem('auth_session', JSON.stringify(userSession));
       return true;
+    } catch (err) {
+      console.error('Erro na autenticação:', err);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
