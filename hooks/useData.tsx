@@ -48,9 +48,13 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [teachers, setTeachers] = useState<Teacher[]>(() => getLocal('teachers', []));
   const [courses, setCourses] = useState<Course[]>(() => getLocal('courses', []));
   const [partners, setPartners] = useState<Partner[]>(() => getLocal('partners', []));
+  
+  // Lista inicial de usuários incluindo Claudio Administrador
   const [users, setUsers] = useState<User[]>(() => getLocal('users', [
-    { id: '1', name: 'Administrador', username: 'admin', password: '123', role: 'ADMIN' }
+    { id: '1', name: 'Administrador', username: 'admin', password: '123', role: 'ADMIN' },
+    { id: '2', name: 'Claudio', username: 'claudio', password: 'qwe123', role: 'ADMIN' }
   ]));
+  
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -62,7 +66,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   }, [students, teachers, courses, partners, users]);
 
   const refreshData = async () => {
-    // Sincronização manual com o localStorage se necessário
     setLoading(true);
     setStudents(getLocal('students', []));
     setTeachers(getLocal('teachers', []));

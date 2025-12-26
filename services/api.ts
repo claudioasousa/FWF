@@ -1,2 +1,3 @@
-// Arquivo mantido apenas para evitar erros de importação, mas a lógica foi movida para localStorage.
+
+// Serviço de API desativado para priorizar armazenamento local estável.
 export const api = {};
