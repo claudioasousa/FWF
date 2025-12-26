@@ -7,6 +7,8 @@ export interface User {
   name: string;
   role: UserRole;
   password?: string;
+  isOnline?: boolean;
+  lastSeen?: string;
 }
 
 export interface Student {

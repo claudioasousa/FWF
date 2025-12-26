@@ -81,7 +81,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         location: c.location,
         partnerId: c.partner_id,
         status: c.status,
-        teacherIds: [] // Mapeamento N:N simplificado para este exemplo
+        teacherIds: []
       })));
       statuses.push({ name: 'Cursos', ok: !cErr });
 
@@ -101,8 +101,15 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
       statuses.push({ name: 'Alunos', ok: !sErr });
 
       // Fetch Users
-      const { data: uData, error: uErr } = await supabase.from('users').select('*');
-      if (uData) setUsers(uData);
+      const { data: uData, error: uErr } = await supabase.from('users').select('*').order('is_online', { ascending: false });
+      if (uData) setUsers(uData.map(u => ({
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        role: u.role,
+        isOnline: u.is_online,
+        lastSeen: u.last_seen
+      })));
       statuses.push({ name: 'Usuários', ok: !uErr });
 
       setTableStatuses(statuses);
@@ -197,12 +204,23 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   };
 
   const addUser = async (d: Omit<User, 'id'>) => {
-    await supabase.from('users').insert([d]);
+    await supabase.from('users').insert([{
+      name: d.name,
+      username: d.username,
+      password: d.password,
+      role: d.role,
+      is_online: false
+    }]);
     await refreshData();
   };
 
   const updateUser = async (d: User) => {
-    await supabase.from('users').update(d).eq('id', d.id);
+    await supabase.from('users').update({
+      name: d.name,
+      username: d.username,
+      password: d.password,
+      role: d.role
+    }).eq('id', d.id);
     await refreshData();
   };
 

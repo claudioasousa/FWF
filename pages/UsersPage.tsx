@@ -10,7 +10,7 @@ import { PlusIcon, EditIcon, TrashIcon, ShieldIcon } from '../components/Icons';
 import type { User } from '../types';
 
 const UsersPage = () => {
-    const { users, removeUser } = useData();
+    const { users, removeUser, refreshData } = useData();
     const { isAdmin, user: currentUser } = useAuth();
     const navigate = useNavigate();
 
@@ -22,6 +22,13 @@ const UsersPage = () => {
         if (!isAdmin) {
             navigate('/');
         }
+        
+        // Atualizar dados ao entrar na página
+        refreshData();
+        
+        // Polling simples a cada 30 segundos para atualizar status online
+        const interval = setInterval(refreshData, 30000);
+        return () => clearInterval(interval);
     }, [isAdmin, navigate]);
 
     if (!isAdmin) return null;
@@ -51,6 +58,17 @@ const UsersPage = () => {
         }
     };
 
+    const formatLastSeen = (dateString?: string) => {
+        if (!dateString) return 'Nunca';
+        const date = new Date(dateString);
+        return date.toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
     return (
         <div className="animate-fadeIn max-w-7xl mx-auto space-y-10">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -77,6 +95,7 @@ const UsersPage = () => {
                             <tr>
                                 <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Usuário</th>
                                 <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Login</th>
+                                <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
                                 <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Papel</th>
                                 <th className="px-8 py-6 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Ações</th>
                             </tr>
@@ -94,6 +113,27 @@ const UsersPage = () => {
                                     </td>
                                     <td className="px-8 py-6 text-gray-500 dark:text-gray-400 font-medium">
                                         @{u.username}
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <div className="flex flex-col items-center justify-center">
+                                            {u.isOnline ? (
+                                                <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-800">
+                                                    <span className="relative flex h-2 w-2">
+                                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                    </span>
+                                                    <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase">Online</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center">
+                                                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 px-3 py-1 rounded-full border border-gray-100 dark:border-gray-800 opacity-60">
+                                                        <span className="h-2 w-2 rounded-full bg-gray-400"></span>
+                                                        <span className="text-[9px] font-black text-gray-500 uppercase">Offline</span>
+                                                    </div>
+                                                    <span className="text-[8px] text-gray-400 mt-1 font-bold">Visto em: {formatLastSeen(u.lastSeen)}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-8 py-6">
                                         <span className={`px-4 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${

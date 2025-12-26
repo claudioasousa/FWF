@@ -33,12 +33,20 @@ export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
     if (error || !users || users.length === 0) return false;
 
     const foundUser = users[0];
-    const { password: _, ...userSession } = foundUser;
     
-    setUser(userSession as User);
+    // Atualizar status online no banco
+    await supabase
+      .from('users')
+      .update({ is_online: true, last_seen: new Date().toISOString() })
+      .eq('id', foundUser.id);
+
+    const { password: _, ...userSession } = foundUser;
+    const finalUserSession = { ...userSession, isOnline: true } as User;
+    
+    setUser(finalUserSession);
     
     const storage = rememberMe ? localStorage : sessionStorage;
-    storage.setItem('gc_user_session', JSON.stringify(userSession));
+    storage.setItem('gc_user_session', JSON.stringify(finalUserSession));
     
     return true;
   };
@@ -61,7 +69,8 @@ export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
       name,
       username: cleanUsername,
       password,
-      role: 'OPERATOR'
+      role: 'OPERATOR',
+      is_online: false
     }]);
 
     if (error) return { success: false, message: 'Erro ao criar conta.' };
@@ -69,7 +78,15 @@ export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
     return { success: true, message: 'Conta criada com sucesso!' };
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (user && supabase) {
+      // Tentar atualizar status offline no banco
+      await supabase
+        .from('users')
+        .update({ is_online: false, last_seen: new Date().toISOString() })
+        .eq('id', user.id);
+    }
+    
     setUser(null);
     localStorage.removeItem('gc_user_session');
     sessionStorage.removeItem('gc_user_session');

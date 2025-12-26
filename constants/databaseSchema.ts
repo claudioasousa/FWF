@@ -70,8 +70,10 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL, -- Recomenda-se hash em produção
+    password TEXT NOT NULL,
     role user_role DEFAULT 'OPERATOR',
+    is_online BOOLEAN DEFAULT FALSE,
+    last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -83,7 +85,6 @@ VALUES
 ON CONFLICT (username) DO NOTHING;
 
 -- COMENTÁRIOS DE REGRAS DE NEGÓCIO:
--- - Um aluno só pode ser matriculado em cursos de turnos diferentes (validado via trigger ou app).
--- - A deleção de um parceiro mantém o curso mas remove o vínculo (SET NULL).
--- - A deleção de um curso remove todos os vínculos com professores (CASCADE).
+-- - Um aluno só pode ser matriculado em cursos de turnos diferentes.
+-- - Status online é atualizado no login/logout da aplicação.
 `;
