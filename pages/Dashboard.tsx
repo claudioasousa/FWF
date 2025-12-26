@@ -173,13 +173,14 @@ const Dashboard = () => {
             {/* MODAL SCHEMA */}
             <Modal isOpen={isSchemaModalOpen} onClose={() => setIsSchemaModalOpen(false)} title="Exportar Schema para Supabase">
                 <div className="space-y-6">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                        Para habilitar a sincronização, copie o script abaixo e cole-o no 
-                        <strong className="text-blue-600"> SQL Editor </strong> 
-                        do seu painel Supabase. 
-                        <br/><br/>
-                        <span className="text-rose-500 font-bold">Importante:</span> Este script desativa o RLS para que o aplicativo possa salvar dados.
-                    </p>
+                    <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/50">
+                        <p className="text-xs text-amber-800 dark:text-amber-400 font-bold leading-relaxed">
+                            <span className="text-lg mr-2">⚠️</span>
+                            <strong>COMO USAR:</strong> Copie o código abaixo clicando no botão verde. Vá ao seu Supabase, abra o <strong>SQL Editor</strong>, cole e clique em <strong>RUN</strong>. 
+                            <br/><br/>
+                            <span className="underline">Não copie</span> o código TypeScript (como "export const...") manualmente da lista de arquivos, use apenas o botão de cópia abaixo.
+                        </p>
+                    </div>
                     
                     <div className="relative group">
                         <pre className="bg-gray-900 text-blue-400 p-6 rounded-2xl text-[10px] font-mono overflow-x-auto max-h-[300px] custom-scrollbar border border-gray-800">
@@ -187,9 +188,9 @@ const Dashboard = () => {
                         </pre>
                         <button 
                             onClick={handleCopySQL}
-                            className={`absolute top-4 right-4 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copySuccess ? 'bg-emerald-500 text-white' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-md'}`}
+                            className={`absolute top-4 right-4 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${copySuccess ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                         >
-                            {copySuccess ? 'Copiado!' : 'Copiar SQL'}
+                            {copySuccess ? 'Copiado com Sucesso!' : 'Copiar Script SQL'}
                         </button>
                     </div>
                 </div>
