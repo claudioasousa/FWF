@@ -40,9 +40,10 @@ const QuickAction = ({ to, label, icon, bg }: { to: string; label: string; icon:
 );
 
 const Dashboard = () => {
-    const { students, courses, teachers, partners, loading } = useData();
+    const { students, courses, teachers, partners, loading, tableStatuses } = useData();
     const { isAdmin } = useAuth();
     const [isSchemaModalOpen, setIsSchemaModalOpen] = useState(false);
+    const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
 
     const handleCopySQL = () => {
@@ -64,6 +65,8 @@ const Dashboard = () => {
         return [...students].reverse().slice(0, 5);
     }, [students]);
 
+    const connectionOk = tableStatuses.length > 0 && tableStatuses.every(s => s.ok);
+
     return (
         <div className="animate-fadeIn max-w-7xl mx-auto space-y-10 pb-10">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -72,12 +75,15 @@ const Dashboard = () => {
                     <p className="text-gray-500 dark:text-gray-400 mt-3 text-lg font-medium">Controle operacional e métricas em tempo real.</p>
                 </div>
                 <div className="flex gap-3">
-                    <div className="px-5 py-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center">
-                        <div className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500 animate-bounce' : 'bg-emerald-500 animate-pulse'} mr-3`}></div>
+                    <button 
+                        onClick={() => setIsHealthModalOpen(true)}
+                        className={`px-5 py-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border ${connectionOk ? 'border-emerald-100' : 'border-rose-100'} flex items-center transition-all hover:scale-105`}
+                    >
+                        <div className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500 animate-bounce' : (connectionOk ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse')} mr-3`}></div>
                         <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
-                            {loading ? 'Sincronizando...' : 'Servidor Ativo'}
+                            {loading ? 'Sincronizando...' : (connectionOk ? 'Sistema Online' : 'Atenção Necessária')}
                         </span>
-                    </div>
+                    </button>
                 </div>
             </header>
 
@@ -113,15 +119,6 @@ const Dashboard = () => {
                             <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl">
                                 <p className="text-[10px] font-black uppercase text-rose-400 mb-1">Evasão</p>
                                 <p className="text-3xl font-black text-rose-600 dark:text-rose-400">{studentStats.evasao}</p>
-                            </div>
-                        </div>
-                        <div className="mt-8">
-                            <div className="flex justify-between items-end mb-2">
-                                <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Taxa de Sucesso</span>
-                                <span className="text-xl font-black text-emerald-500">{studentStats.aproveitamento}%</span>
-                            </div>
-                            <div className="h-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${studentStats.aproveitamento}%` }}></div>
                             </div>
                         </div>
                     </div>
@@ -170,16 +167,18 @@ const Dashboard = () => {
                             </div>
                         )}
                     </div>
-                    <NavLink to="/alunos" className="mt-10 w-full py-4 bg-gray-50 dark:bg-gray-900 rounded-2xl text-[10px] font-black text-gray-400 hover:text-blue-600 transition-all text-center block uppercase tracking-widest">Listagem Completa</NavLink>
                 </div>
             </div>
 
+            {/* MODAL SCHEMA */}
             <Modal isOpen={isSchemaModalOpen} onClose={() => setIsSchemaModalOpen(false)} title="Exportar Schema para Supabase">
                 <div className="space-y-6">
                     <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                         Para habilitar a sincronização, copie o script abaixo e cole-o no 
                         <strong className="text-blue-600"> SQL Editor </strong> 
-                        do seu painel Supabase.
+                        do seu painel Supabase. 
+                        <br/><br/>
+                        <span className="text-rose-500 font-bold">Importante:</span> Este script desativa o RLS para que o aplicativo possa salvar dados.
                     </p>
                     
                     <div className="relative group">
@@ -193,11 +192,30 @@ const Dashboard = () => {
                             {copySuccess ? 'Copiado!' : 'Copiar SQL'}
                         </button>
                     </div>
+                </div>
+            </Modal>
 
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-2xl border border-blue-100 dark:border-blue-800">
-                        <p className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-widest mb-1">Dica de Setup</p>
-                        <p className="text-xs text-blue-500 dark:text-blue-300">Certifique-se de executar o script antes de tentar cadastrar novos dados.</p>
+            {/* MODAL SAÚDE DO SISTEMA */}
+            <Modal isOpen={isHealthModalOpen} onClose={() => setIsHealthModalOpen(false)} title="Diagnóstico de Conexão">
+                <div className="space-y-6">
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-4">Status das Tabelas</p>
+                    <div className="space-y-3">
+                        {tableStatuses.map(status => (
+                            <div key={status.name} className={`p-4 rounded-2xl border flex items-center justify-between ${status.ok ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-rose-50 border-rose-100 text-rose-700'}`}>
+                                <div className="flex items-center gap-3">
+                                    <span className="font-black text-sm uppercase">{status.name}</span>
+                                </div>
+                                <span className="text-[10px] font-black uppercase px-2 py-1 bg-white/50 rounded-lg">
+                                    {status.ok ? 'Conectado' : 'Falhou'}
+                                </span>
+                            </div>
+                        ))}
                     </div>
+                    {!connectionOk && (
+                        <div className="bg-rose-100 p-4 rounded-2xl text-rose-800 text-xs font-bold leading-relaxed">
+                            ⚠️ Uma ou mais tabelas não estão respondendo. Isso ocorre porque o script SQL não foi executado ou o RLS está bloqueando o acesso. Vá em "Gerar Script SQL" e execute o código no seu Supabase.
+                        </div>
+                    )}
                 </div>
             </Modal>
         </div>

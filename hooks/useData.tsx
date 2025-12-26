@@ -3,6 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Student, Teacher, Course, Partner, User } from '../types';
 import { supabase } from '../lib/supabase';
 
+interface TableStatus {
+  name: string;
+  ok: boolean;
+  error?: string;
+}
+
 interface DataContextType {
   students: Student[];
   teachers: Teacher[];
@@ -10,6 +16,7 @@ interface DataContextType {
   partners: Partner[];
   users: User[];
   loading: boolean;
+  tableStatuses: TableStatus[];
   refreshData: () => Promise<void>;
   addStudent: (student: Omit<Student, 'id'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;
@@ -37,107 +44,135 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tableStatuses, setTableStatuses] = useState<TableStatus[]>([]);
 
   const fetchData = async () => {
     setLoading(true);
+    const statuses: TableStatus[] = [];
+    
     try {
-      const [s, t, c, p, u] = await Promise.all([
-        supabase.from('students').select('*'),
-        supabase.from('teachers').select('*'),
-        supabase.from('courses').select('*'),
-        supabase.from('partners').select('*'),
-        supabase.from('users').select('*')
-      ]);
+      const tables = ['students', 'teachers', 'courses', 'partners', 'users'];
+      
+      const results = await Promise.all(
+        tables.map(table => supabase.from(table).select('*', { count: 'exact', head: false }))
+      );
 
-      if (s.data) setStudents(s.data);
-      if (t.data) setTeachers(t.data);
-      if (c.data) setCourses(c.data);
-      if (p.data) setPartners(p.data);
-      if (u.data) setUsers(u.data);
+      results.forEach((res, index) => {
+        const tableName = tables[index];
+        if (res.error) {
+          statuses.push({ name: tableName, ok: false, error: res.error.message });
+        } else {
+          statuses.push({ name: tableName, ok: true });
+          if (tableName === 'students') setStudents(res.data || []);
+          if (tableName === 'teachers') setTeachers(res.data || []);
+          if (tableName === 'courses') setCourses(res.data || []);
+          if (tableName === 'partners') setPartners(res.data || []);
+          if (tableName === 'users') setUsers(res.data || []);
+        }
+      });
 
+      setTableStatuses(statuses);
     } catch (error) {
-      console.warn('Sync error or missing tables.');
+      console.error('Erro crítico de conexão:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const ensureAdminUser = async () => {
+  const ensureInitialUsers = async () => {
     try {
-      const { data: existing } = await supabase
-        .from('users')
-        .select('username')
-        .eq('username', 'claudioasousa')
-        .maybeSingle();
+      const usersToCreate = [
+        { name: 'Claudio A. Sousa', username: 'claudioasousa', password: 'cas661010', role: 'ADMIN' },
+        { name: 'Administrador Padrão', username: 'admin', password: 'admin', role: 'ADMIN' }
+      ];
 
-      if (!existing) {
-        await supabase.from('users').insert([{
-          name: 'Claudio A. Sousa',
-          username: 'claudioasousa',
-          password: 'cas661010',
-          role: 'ADMIN'
-        }]);
-        await fetchData();
+      for (const userData of usersToCreate) {
+        const { data: existing } = await supabase
+          .from('users')
+          .select('username')
+          .eq('username', userData.username)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from('users').insert([userData]);
+        }
       }
-    } catch (err) {}
+    } catch (err) {
+      console.debug("Tabelas não prontas para inserção de usuários padrão.");
+    }
   };
 
   useEffect(() => {
     const init = async () => {
       await fetchData();
-      await ensureAdminUser();
+      await ensureInitialUsers();
     };
     init();
   }, []);
 
-  const refreshData = async () => fetchData();
+  const handleError = (error: any, action: string) => {
+    console.error(`Erro em ${action}:`, error);
+    let msg = `Erro ao ${action}: ${error.message}`;
+    
+    if (error.code === '42P01') {
+      msg = "Tabela não encontrada. Você precisa rodar o Script SQL no Supabase.";
+    } else if (error.message.includes('row-level security')) {
+      msg = "Permissão negada (RLS). Rode o novo script SQL para desativar o RLS das tabelas.";
+    } else if (error.code === '23505') {
+      msg = "Este registro já existe (duplicidade de CPF ou Usuário).";
+    }
+    
+    alert(msg);
+  };
 
   const add = async (table: string, data: any) => {
     const { error } = await supabase.from(table).insert([data]);
     if (error) {
-        alert('Tabelas não encontradas. Vá ao Dashboard e clique em "Gerar Script SQL" para configurar seu Supabase.');
-        throw error;
+      handleError(error, `cadastrar em ${table}`);
+      throw error;
     }
     await fetchData();
   };
 
   const update = async (table: string, data: any) => {
-    const { id, ...updates } = data;
+    const { id, created_at, ...updates } = data;
     const { error } = await supabase.from(table).update(updates).eq('id', id);
-    if (error) throw error;
+    if (error) {
+      handleError(error, `atualizar em ${table}`);
+      throw error;
+    }
     await fetchData();
   };
 
   const remove = async (table: string, id: string) => {
     const { error } = await supabase.from(table).delete().eq('id', id);
-    if (error) throw error;
+    if (error) {
+      handleError(error, `excluir em ${table}`);
+      throw error;
+    }
     await fetchData();
   };
 
-  const addStudent = (data: any) => add('students', data);
-  const updateStudent = (data: any) => update('students', data);
-  const removeStudent = (id: string) => remove('students', id);
-  const addTeacher = (data: any) => add('teachers', data);
-  const updateTeacher = (data: any) => update('teachers', data);
-  const removeTeacher = (id: string) => remove('teachers', id);
-  const addCourse = (data: any) => add('courses', data);
-  const updateCourse = (data: any) => update('courses', data);
-  const removeCourse = (id: string) => remove('courses', id);
-  const addPartner = (data: any) => add('partners', data);
-  const updatePartner = (data: any) => update('partners', data);
-  const removePartner = (id: string) => remove('partners', id);
-  const addUser = (data: any) => add('users', data);
-  const updateUser = (data: any) => update('users', data);
-  const removeUser = (id: string) => remove('users', id);
+  const refreshData = async () => fetchData();
 
   return (
     <DataContext.Provider value={{
-      students, teachers, courses, partners, users, loading, refreshData,
-      addStudent, updateStudent, removeStudent,
-      addTeacher, updateTeacher, removeTeacher,
-      addCourse, updateCourse, removeCourse,
-      addPartner, updatePartner, removePartner,
-      addUser, updateUser, removeUser
+      students, teachers, courses, partners, users, loading, tableStatuses, refreshData,
+      addStudent: (d) => add('students', d),
+      updateStudent: (d) => update('students', d),
+      removeStudent: (id) => remove('students', id),
+      addTeacher: (d) => add('teachers', d),
+      updateTeacher: (d) => update('teachers', d),
+      removeTeacher: (id) => remove('teachers', id),
+      addCourse: (d) => add('courses', d),
+      updateCourse: (d) => update('courses', d),
+      removeCourse: (id) => remove('courses', id),
+      addPartner: (d) => add('partners', d),
+      updatePartner: (d) => update('partners', d),
+      removePartner: (id) => remove('partners', id),
+      addUser: (d) => add('users', d),
+      updateUser: (d) => update('users', d),
+      removeUser: (id) => remove('users', id)
     }}>
       {children}
     </DataContext.Provider>
