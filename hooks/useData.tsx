@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Student, Teacher, Course, Partner, User } from '../types';
+import { api } from '../services/api';
 
 interface DataContextType {
   students: Student[];
@@ -8,71 +9,84 @@ interface DataContextType {
   courses: Course[];
   partners: Partner[];
   users: User[];
-  addStudent: (student: Omit<Student, 'id'>) => void;
-  updateStudent: (student: Student) => void;
-  removeStudent: (id: string) => void;
-  addTeacher: (teacher: Omit<Teacher, 'id'>) => void;
-  updateTeacher: (teacher: Teacher) => void;
-  removeTeacher: (id: string) => void;
-  addCourse: (course: Omit<Course, 'id'>) => void;
-  updateCourse: (course: Course) => void;
-  removeCourse: (id: string) => void;
-  addPartner: (partner: Omit<Partner, 'id'>) => void;
-  updatePartner: (partner: Partner) => void;
-  removePartner: (id: string) => void;
-  addUser: (user: Omit<User, 'id'>) => void;
-  updateUser: (user: User) => void;
-  removeUser: (id: string) => void;
+  loading: boolean;
+  refreshData: () => Promise<void>;
+  addStudent: (student: Omit<Student, 'id'>) => Promise<void>;
+  updateStudent: (student: Student) => Promise<void>;
+  removeStudent: (id: string) => Promise<void>;
+  addTeacher: (teacher: Omit<Teacher, 'id'>) => Promise<void>;
+  updateTeacher: (teacher: Teacher) => Promise<void>;
+  removeTeacher: (id: string) => Promise<void>;
+  addCourse: (course: Omit<Course, 'id'>) => Promise<void>;
+  updateCourse: (course: Course) => Promise<void>;
+  removeCourse: (id: string) => Promise<void>;
+  addPartner: (partner: Omit<Partner, 'id'>) => Promise<void>;
+  updatePartner: (partner: Partner) => Promise<void>;
+  removePartner: (id: string) => Promise<void>;
+  addUser: (user: Omit<User, 'id'>) => Promise<void>;
+  updateUser: (user: User) => Promise<void>;
+  removeUser: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
-  const [students, setStudents] = useState<Student[]>(() => JSON.parse(localStorage.getItem('students') || '[]'));
-  const [teachers, setTeachers] = useState<Teacher[]>(() => JSON.parse(localStorage.getItem('teachers') || '[]'));
-  const [courses, setCourses] = useState<Course[]>(() => JSON.parse(localStorage.getItem('courses') || '[]'));
-  const [partners, setPartners] = useState<Partner[]>(() => JSON.parse(localStorage.getItem('partners') || '[]'));
-  
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('app_users');
-    if (saved) return JSON.parse(saved);
-    // Usuário inicial padrão se não houver nenhum
-    return [{ id: 'admin-init', username: 'claudio', name: 'Claudio (Admin)', role: 'ADMIN', password: 'qwe123' }];
-  });
+  const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refreshData = async () => {
+    try {
+      setLoading(true);
+      const [s, t, c, p, u] = await Promise.all([
+        api.get('/students'),
+        api.get('/teachers'),
+        api.get('/courses'),
+        api.get('/partners'),
+        api.get('/users')
+      ]);
+      setStudents(s);
+      setTeachers(t);
+      setCourses(c);
+      setPartners(p);
+      setUsers(u);
+    } catch (err) {
+      console.error("Falha ao conectar com o banco de dados SQL local. Certifique-se que o servidor bridge está rodando.", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    localStorage.setItem('students', JSON.stringify(students));
-    localStorage.setItem('teachers', JSON.stringify(teachers));
-    localStorage.setItem('courses', JSON.stringify(courses));
-    localStorage.setItem('partners', JSON.stringify(partners));
-    localStorage.setItem('app_users', JSON.stringify(users));
-  }, [students, teachers, courses, partners, users]);
+    refreshData();
+  }, []);
 
-  const generateId = () => Math.random().toString(36).substr(2, 9);
+  const addStudent = async (data: any) => { await api.post('/students', data); refreshData(); };
+  const updateStudent = async (data: any) => { await api.put(`/students/${data.id}`, data); refreshData(); };
+  const removeStudent = async (id: string) => { await api.delete(`/students/${id}`); refreshData(); };
 
-  const addStudent = (s: Omit<Student, 'id'>) => setStudents([...students, { ...s, id: generateId() }]);
-  const updateStudent = (s: Student) => setStudents(students.map(item => item.id === s.id ? s : item));
-  const removeStudent = (id: string) => setStudents(students.filter(item => item.id !== id));
+  const addTeacher = async (data: any) => { await api.post('/teachers', data); refreshData(); };
+  const updateTeacher = async (data: any) => { await api.put(`/teachers/${data.id}`, data); refreshData(); };
+  const removeTeacher = async (id: string) => { await api.delete(`/teachers/${id}`); refreshData(); };
 
-  const addTeacher = (t: Omit<Teacher, 'id'>) => setTeachers([...teachers, { ...t, id: generateId() }]);
-  const updateTeacher = (t: Teacher) => setTeachers(teachers.map(item => item.id === t.id ? t : item));
-  const removeTeacher = (id: string) => setTeachers(teachers.filter(item => item.id !== id));
+  const addCourse = async (data: any) => { await api.post('/courses', data); refreshData(); };
+  const updateCourse = async (data: any) => { await api.put(`/courses/${data.id}`, data); refreshData(); };
+  const removeCourse = async (id: string) => { await api.delete(`/courses/${id}`); refreshData(); };
 
-  const addCourse = (c: Omit<Course, 'id'>) => setCourses([...courses, { ...c, id: generateId() }]);
-  const updateCourse = (c: Course) => setCourses(courses.map(item => item.id === c.id ? c : item));
-  const removeCourse = (id: string) => setCourses(courses.filter(item => item.id !== id));
+  const addPartner = async (data: any) => { await api.post('/partners', data); refreshData(); };
+  const updatePartner = async (data: any) => { await api.put(`/partners/${data.id}`, data); refreshData(); };
+  const removePartner = async (id: string) => { await api.delete(`/partners/${id}`); refreshData(); };
 
-  const addPartner = (p: Omit<Partner, 'id'>) => setPartners([...partners, { ...p, id: generateId() }]);
-  const updatePartner = (p: Partner) => setPartners(partners.map(item => item.id === p.id ? p : item));
-  const removePartner = (id: string) => setPartners(partners.filter(item => item.id !== id));
-
-  const addUser = (u: Omit<User, 'id'>) => setUsers([...users, { ...u, id: generateId() }]);
-  const updateUser = (u: User) => setUsers(users.map(item => item.id === u.id ? u : item));
-  const removeUser = (id: string) => setUsers(users.filter(item => item.id !== id));
+  const addUser = async (data: any) => { await api.post('/users', data); refreshData(); };
+  const updateUser = async (data: any) => { await api.put(`/users/${data.id}`, data); refreshData(); };
+  const removeUser = async (id: string) => { await api.delete(`/users/${id}`); refreshData(); };
 
   return (
     <DataContext.Provider value={{
-      students, teachers, courses, partners, users,
+      students, teachers, courses, partners, users, loading, refreshData,
       addStudent, updateStudent, removeStudent,
       addTeacher, updateTeacher, removeTeacher,
       addCourse, updateCourse, removeCourse,
