@@ -2,7 +2,8 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { HomeIcon, UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, ClipboardListIcon, FileDownIcon, ShieldIcon, XIcon } from './Icons';
+import { useTheme } from '../hooks/useTheme';
+import { HomeIcon, UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, ClipboardListIcon, FileDownIcon, ShieldIcon, XIcon, SunIcon, MoonIcon } from './Icons';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const { user, logout, isAdmin } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const navItems = [
     { to: '/', text: 'Dashboard', icon: <HomeIcon className="h-5 w-5" />, show: true },
@@ -71,7 +73,16 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           ))}
         </nav>
         
-        <div className="p-6">
+        <div className="p-6 space-y-4">
+          {/* Theme Toggle Button */}
+          <button 
+            onClick={toggleTheme}
+            className="w-full flex items-center justify-between px-6 py-3 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 transition-all group"
+          >
+            <span className="text-[10px] font-black uppercase tracking-widest">Modo {theme === 'light' ? 'Escuro' : 'Claro'}</span>
+            {theme === 'light' ? <MoonIcon className="h-5 w-5 group-hover:rotate-12 transition-transform" /> : <SunIcon className="h-5 w-5 group-hover:rotate-90 transition-transform" />}
+          </button>
+
           <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-700">
              <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-black text-[10px]">

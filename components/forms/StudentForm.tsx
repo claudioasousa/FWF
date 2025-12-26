@@ -26,7 +26,8 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
   });
 
   const isEnrolled = student && !!student.courseId;
-  const isReadOnly = isEnrolled && !isAdmin;
+  // Regra: Bloquear apenas campos de enturmação para operadores se o aluno já estiver em um curso.
+  const isEnrollmentReadOnly = isEnrolled && !isAdmin;
 
   const classOptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
@@ -69,10 +70,12 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    if (isReadOnly) return;
     const { name, value } = e.target;
     setError(null);
     
+    // Bloquear alteração se for campo restrito
+    if (isEnrollmentReadOnly && ['courseId', 'class', 'status'].includes(name)) return;
+
     if (name === 'cpf') {
       setFormData(prev => ({ ...prev, [name]: formatCPF(value) }));
     } else if (name === 'contact') {
@@ -97,18 +100,18 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
     if (!formData.courseId) return true;
 
+    // Se o curso não mudou (edição de outros campos), não precisa validar conflito de novo
+    if (student && student.courseId === formData.courseId) return true;
+
     const selectedCourse = courses.find(c => c.id === formData.courseId);
     if (!selectedCourse) return true;
 
-    // REGRA ATUALIZADA: Um estudante pode estar em vários cursos APENAS se os turnos forem diferentes.
     const conflict = students.find(s => {
-      // Ignorar o próprio registro se estiver editando
       if (student && s.id === student.id) return false;
       
       const sCleanCPF = s.cpf.replace(/\D/g, '');
       if (sCleanCPF === cleanCPF && s.courseId) {
         const otherCourse = courses.find(c => c.id === s.courseId);
-        // Se o turno for o mesmo, bloqueia.
         if (otherCourse && otherCourse.period === selectedCourse.period) {
            return true;
         }
@@ -118,7 +121,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
     if (conflict) {
       const conflictCourse = courses.find(c => c.id === conflict.courseId);
-      setError(`Conflito de Turno: Este aluno já possui uma matrícula no turno ${selectedCourse.period} (Curso: ${conflictCourse?.name}). Para matricular em um novo curso, este deve ser em um turno diferente.`);
+      setError(`Conflito de Turno: Este aluno já possui uma matrícula no turno ${selectedCourse.period} (Curso: ${conflictCourse?.name}).`);
       return false;
     }
 
@@ -127,7 +130,6 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isReadOnly) return;
     if (!validateEnrollment()) return;
 
     const finalData = {
@@ -152,13 +154,13 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
           </div>
         )}
 
-        {isReadOnly && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-3 mb-6">
+        {isEnrollmentReadOnly && (
+          <div className="bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-500 p-3 mb-6">
             <p className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 tracking-widest">
-              🔒 Registro Bloqueado para Operador
+              🔒 Vínculo Acadêmico Restrito
             </p>
             <p className="text-[9px] text-amber-600 dark:text-amber-500 font-bold">
-              Alunos enturmados só podem ser alterados por administradores.
+              Alterações de Curso/Turma exigem permissão de Administrador. Dados de contato podem ser editados.
             </p>
           </div>
         )}
@@ -171,8 +173,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
               value={formData.name} 
               onChange={handleChange} 
               required 
-              readOnly={isReadOnly}
-              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`} 
+              className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
               placeholder="Ex: João Silva" 
             />
         </div>
@@ -186,9 +187,8 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                   value={formData.cpf} 
                   onChange={handleChange} 
                   required 
-                  readOnly={isReadOnly}
                   placeholder="000.000.000-00"
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`} 
+                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
                 />
             </div>
             <div>
@@ -199,9 +199,8 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                   value={formData.contact} 
                   onChange={handleChange} 
                   required 
-                  readOnly={isReadOnly}
                   placeholder="(00) 00000-0000"
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`} 
+                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
                 />
             </div>
         </div>
@@ -215,8 +214,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                   value={formData.birthDate} 
                   onChange={handleChange} 
                   required 
-                  readOnly={isReadOnly}
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`} 
+                  className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
                 />
             </div>
             <div>
@@ -225,8 +223,8 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                   name="status" 
                   value={formData.status} 
                   onChange={handleChange} 
-                  disabled={isReadOnly}
-                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`}
+                  disabled={isEnrollmentReadOnly}
+                  className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isEnrollmentReadOnly ? 'opacity-70 bg-gray-50 dark:bg-gray-800' : ''}`}
                 >
                     <option value="CURSANDO">Cursando</option>
                     <option value="APROVADO">Aprovado</option>
@@ -244,8 +242,7 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
               value={formData.address} 
               onChange={handleChange} 
               required 
-              readOnly={isReadOnly}
-              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`} 
+              className="w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all" 
               placeholder="Rua, número, bairro" 
             />
         </div>
@@ -257,8 +254,8 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                 name="courseId" 
                 value={formData.courseId} 
                 onChange={handleChange} 
-                disabled={isReadOnly}
-                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all font-medium ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`}
+                disabled={isEnrollmentReadOnly}
+                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all font-medium ${isEnrollmentReadOnly ? 'opacity-70 bg-gray-50 dark:bg-gray-800' : ''}`}
               >
                   <option value="">Nenhum curso</option>
                   {courses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.period})</option>)}
@@ -270,8 +267,8 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
                 name="class" 
                 value={formData.class} 
                 onChange={handleChange} 
-                disabled={isReadOnly}
-                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isReadOnly ? 'opacity-70 cursor-not-allowed bg-gray-50' : ''}`}
+                disabled={isEnrollmentReadOnly}
+                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 outline-none transition-all ${isEnrollmentReadOnly ? 'opacity-70 bg-gray-50 dark:bg-gray-800' : ''}`}
               >
                   <option value="">-</option>
                   {classOptions.map(letter => <option key={letter} value={letter}>Turma {letter}</option>)}
@@ -281,13 +278,11 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
 
       <div className="flex justify-end space-x-3 mt-8 border-t dark:border-gray-700 pt-6">
         <button type="button" onClick={onCancel} className="px-6 py-2.5 text-gray-600 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all">
-          {isReadOnly ? 'Fechar' : 'Cancelar'}
+          Cancelar
         </button>
-        {!isReadOnly && (
-          <button type="submit" className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95">
-            {student ? 'Salvar Alterações' : 'Confirmar Matrícula'}
-          </button>
-        )}
+        <button type="submit" className="px-8 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95">
+          {student ? 'Salvar Alterações' : 'Confirmar Matrícula'}
+        </button>
       </div>
     </form>
   );
