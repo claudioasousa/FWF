@@ -41,13 +41,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [
-        { data: s },
-        { data: t },
-        { data: c },
-        { data: p },
-        { data: u }
-      ] = await Promise.all([
+      const results = await Promise.all([
         supabase.from('students').select('*'),
         supabase.from('teachers').select('*'),
         supabase.from('courses').select('*'),
@@ -55,13 +49,16 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         supabase.from('users').select('*')
       ]);
 
-      if (s) setStudents(s);
-      if (t) setTeachers(t);
-      if (c) setCourses(c);
-      if (p) setPartners(p);
-      if (u) setUsers(u);
+      const [s, t, c, p, u] = results;
+
+      if (s.data) setStudents(s.data);
+      if (t.data) setTeachers(t.data);
+      if (c.data) setCourses(c.data);
+      if (p.data) setPartners(p.data);
+      if (u.data) setUsers(u.data);
+
     } catch (error) {
-      console.error('Erro ao buscar dados do Supabase:', error);
+      console.warn('Conexão ativa, mas algumas tabelas podem ainda não existir no Supabase.');
     } finally {
       setLoading(false);
     }
@@ -69,7 +66,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   const ensureAdminUser = async () => {
     try {
-      // Verifica se o usuário específico claudioasousa já existe
+      // Busca específica pelo usuário claudioasousa
       const { data: existingUser, error } = await supabase
         .from('users')
         .select('username')
@@ -77,7 +74,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         .maybeSingle();
 
       if (!existingUser && !error) {
-        // Cria o usuário administrador conforme solicitado
+        console.log('Criando usuário administrador inicial...');
         await supabase.from('users').insert([{
           name: 'Claudio A. Sousa',
           username: 'claudioasousa',
@@ -85,10 +82,9 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
           role: 'ADMIN'
         }]);
         await fetchData();
-        console.log('Usuário claudioasousa criado com sucesso.');
       }
     } catch (err) {
-      console.error('Falha ao verificar/criar usuário admin padrão:', err);
+      // Tabela de usuários pode não estar pronta ainda
     }
   };
 
@@ -104,7 +100,10 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   const add = async (table: string, data: any) => {
     const { error } = await supabase.from(table).insert([data]);
-    if (error) throw error;
+    if (error) {
+        alert('Atenção: Use o botão "Gerar Script SQL" no Dashboard para criar as tabelas no seu projeto Supabase antes de inserir dados.');
+        throw error;
+    }
     await fetchData();
   };
 

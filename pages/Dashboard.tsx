@@ -1,7 +1,11 @@
-import React, { useMemo } from 'react';
+
+import React, { useMemo, useState } from 'react';
 import { useData } from '../hooks/useData';
-import { UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, PlusIcon, ClipboardListIcon } from '../components/Icons';
+import { useAuth } from '../hooks/useAuth';
+import { UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, PlusIcon, ClipboardListIcon, ShieldIcon } from '../components/Icons';
 import { NavLink } from 'react-router-dom';
+import { DATABASE_SCHEMA_SQL } from '../constants/databaseSchema';
+import Modal from '../components/Modal';
 
 const StatCard = ({ title, value, icon, color, trend }: { title: string; value: number; icon: React.ReactNode; color: string; trend?: string }) => (
     <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden relative">
@@ -36,7 +40,16 @@ const QuickAction = ({ to, label, icon, bg }: { to: string; label: string; icon:
 );
 
 const Dashboard = () => {
-    const { students, courses, teachers, partners } = useData();
+    const { students, courses, teachers, partners, loading } = useData();
+    const { isAdmin } = useAuth();
+    const [isSchemaModalOpen, setIsSchemaModalOpen] = useState(false);
+    const [copySuccess, setCopySuccess] = useState(false);
+
+    const handleCopySQL = () => {
+        navigator.clipboard.writeText(DATABASE_SCHEMA_SQL);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+    };
 
     const studentStats = useMemo(() => {
         return {
@@ -60,8 +73,10 @@ const Dashboard = () => {
                 </div>
                 <div className="flex gap-3">
                     <div className="px-5 py-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-3"></div>
-                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Servidor Ativo</span>
+                        <div className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500 animate-bounce' : 'bg-emerald-500 animate-pulse'} mr-3`}></div>
+                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                            {loading ? 'Sincronizando...' : 'Servidor Ativo'}
+                        </span>
                     </div>
                 </div>
             </header>
@@ -111,14 +126,25 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-blue-700 to-indigo-900 p-10 rounded-[48px] text-white flex items-center justify-between group overflow-hidden relative shadow-2xl shadow-blue-500/20">
-                        <div className="relative z-10">
-                            <h2 className="text-3xl font-black mb-2 tracking-tighter">Expansão 2025</h2>
-                            <p className="text-blue-200 font-medium max-w-sm">Novas parcerias corporativas abertas para o próximo semestre letivo.</p>
-                            <button className="mt-6 bg-white text-blue-900 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-50 transition-all active:scale-95">Ver Parceiros</button>
+                    {isAdmin && (
+                        <div className="bg-white dark:bg-gray-800 p-10 rounded-[48px] shadow-sm border border-dashed border-blue-200 dark:border-blue-900/50 flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="flex items-center gap-6">
+                                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-3xl flex items-center justify-center text-blue-600">
+                                    <ShieldIcon className="h-8 w-8" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black dark:text-white">Infraestrutura Supabase</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Exporte e configure as tabelas do banco de dados.</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setIsSchemaModalOpen(true)}
+                                className="px-8 py-4 bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-gray-500/10"
+                            >
+                                Gerar Script SQL
+                            </button>
                         </div>
-                        <div className="text-9xl opacity-20 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-700">🏢</div>
-                    </div>
+                    )}
                 </div>
 
                 {/* ÚLTIMOS INGRESSOS */}
@@ -139,12 +165,41 @@ const Dashboard = () => {
                                 </div>
                             </div>
                         )) : (
-                            <div className="text-center py-10 text-gray-300 font-black uppercase text-xs tracking-tighter">Vazio</div>
+                            <div className="text-center py-10 text-gray-300 font-black uppercase text-xs tracking-tighter">
+                                {loading ? 'Carregando...' : 'Nenhuma matrícula'}
+                            </div>
                         )}
                     </div>
                     <NavLink to="/alunos" className="mt-10 w-full py-4 bg-gray-50 dark:bg-gray-900 rounded-2xl text-[10px] font-black text-gray-400 hover:text-blue-600 transition-all text-center block uppercase tracking-widest">Listagem Completa</NavLink>
                 </div>
             </div>
+
+            <Modal isOpen={isSchemaModalOpen} onClose={() => setIsSchemaModalOpen(false)} title="Exportar Schema para Supabase">
+                <div className="space-y-6">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        Para habilitar a sincronização, copie o script abaixo e cole-o no 
+                        <strong className="text-blue-600"> SQL Editor </strong> 
+                        do seu painel Supabase.
+                    </p>
+                    
+                    <div className="relative group">
+                        <pre className="bg-gray-900 text-blue-400 p-6 rounded-2xl text-[10px] font-mono overflow-x-auto max-h-[300px] custom-scrollbar border border-gray-800">
+                            {DATABASE_SCHEMA_SQL}
+                        </pre>
+                        <button 
+                            onClick={handleCopySQL}
+                            className={`absolute top-4 right-4 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copySuccess ? 'bg-emerald-500 text-white' : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-md'}`}
+                        >
+                            {copySuccess ? 'Copiado!' : 'Copiar SQL'}
+                        </button>
+                    </div>
+
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-2xl border border-blue-100 dark:border-blue-800">
+                        <p className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-widest mb-1">Dica de Setup</p>
+                        <p className="text-xs text-blue-500 dark:text-blue-300">Certifique-se de executar o script antes de tentar cadastrar novos dados.</p>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };
