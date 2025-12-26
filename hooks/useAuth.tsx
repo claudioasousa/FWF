@@ -1,7 +1,6 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { User } from '../types';
-import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -15,76 +14,51 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [user, setUser] = useState<User | null>(() => {
-    const savedLocal = localStorage.getItem('gestao_cursos_user_session');
-    const savedSession = sessionStorage.getItem('gestao_cursos_user_session');
+    const savedLocal = localStorage.getItem('gc_user_session');
+    const savedSession = sessionStorage.getItem('gc_user_session');
     const saved = savedLocal || savedSession;
     return saved ? JSON.parse(saved) : null;
   });
 
   const login = async (username: string, password: string, rememberMe: boolean): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('username', username.toLowerCase().trim())
-        .eq('password', password)
-        .single();
+    const users: User[] = JSON.parse(localStorage.getItem('gc_users') || '[]');
+    const foundUser = users.find(u => u.username.toLowerCase() === username.toLowerCase().trim() && u.password === password);
 
-      if (error || !data) return false;
+    if (!foundUser) return false;
 
-      // Remove a senha antes de persistir no estado/storage
-      const { password: _, ...userSession } = data;
-      const finalUser = userSession as User;
-      
-      setUser(finalUser);
-      
-      const storage = rememberMe ? localStorage : sessionStorage;
-      storage.setItem('gestao_cursos_user_session', JSON.stringify(finalUser));
-      
-      // Limpa storage oposto
-      if (rememberMe) sessionStorage.removeItem('gestao_cursos_user_session');
-      else localStorage.removeItem('gestao_cursos_user_session');
-
-      return true;
-    } catch (err) {
-      console.error('Auth Error:', err);
-      return false;
-    }
+    const { password: _, ...userSession } = foundUser;
+    setUser(userSession as User);
+    
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem('gc_user_session', JSON.stringify(userSession));
+    
+    return true;
   };
 
   const signUp = async (name: string, username: string, password: string): Promise<{success: boolean, message: string}> => {
-    try {
-      const cleanUsername = username.toLowerCase().trim();
-      
-      const { data: existing } = await supabase
-        .from('users')
-        .select('username')
-        .eq('username', cleanUsername)
-        .maybeSingle();
-
-      if (existing) {
-        return { success: false, message: 'Este usuário já está cadastrado.' };
-      }
-
-      const { error } = await supabase.from('users').insert([{
-        name,
-        username: cleanUsername,
-        password,
-        role: 'OPERATOR'
-      }]);
-
-      if (error) throw error;
-
-      return { success: true, message: 'Conta criada! Faça login para continuar.' };
-    } catch (err) {
-      return { success: false, message: 'Erro ao conectar com o banco de dados.' };
+    const users: User[] = JSON.parse(localStorage.getItem('gc_users') || '[]');
+    const cleanUsername = username.toLowerCase().trim();
+    
+    if (users.find(u => u.username.toLowerCase() === cleanUsername)) {
+      return { success: false, message: 'Usuário já existe.' };
     }
+
+    const newUser = {
+      id: Math.random().toString(36).substr(2, 9),
+      name,
+      username: cleanUsername,
+      password,
+      role: 'OPERATOR' as const
+    };
+
+    localStorage.setItem('gc_users', JSON.stringify([...users, newUser]));
+    return { success: true, message: 'Conta criada com sucesso!' };
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('gestao_cursos_user_session');
-    sessionStorage.removeItem('gestao_cursos_user_session');
+    localStorage.removeItem('gc_user_session');
+    sessionStorage.removeItem('gc_user_session');
   };
 
   const isAdmin = user?.role === 'ADMIN';

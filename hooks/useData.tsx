@@ -1,13 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Student, Teacher, Course, Partner, User } from '../types';
-import { supabase } from '../lib/supabase';
-
-interface TableStatus {
-  name: string;
-  ok: boolean;
-  error?: string;
-}
 
 interface DataContextType {
   students: Student[];
@@ -16,26 +9,33 @@ interface DataContextType {
   partners: Partner[];
   users: User[];
   loading: boolean;
-  tableStatuses: TableStatus[];
   refreshData: () => Promise<void>;
-  addStudent: (student: Omit<Student, 'id'>) => Promise<void>;
-  updateStudent: (student: Student) => Promise<void>;
-  removeStudent: (id: string) => Promise<void>;
-  addTeacher: (teacher: Omit<Teacher, 'id'>) => Promise<void>;
-  updateTeacher: (teacher: Teacher) => Promise<void>;
-  removeTeacher: (id: string) => Promise<void>;
-  addCourse: (course: Omit<Course, 'id'>) => Promise<void>;
-  updateCourse: (course: Course) => Promise<void>;
-  removeCourse: (id: string) => Promise<void>;
-  addPartner: (partner: Omit<Partner, 'id'>) => Promise<void>;
-  updatePartner: (partner: Partner) => Promise<void>;
-  removePartner: (id: string) => Promise<void>;
-  addUser: (user: Omit<User, 'id'>) => Promise<void>;
-  updateUser: (user: User) => Promise<void>;
-  removeUser: (id: string) => Promise<void>;
+  addStudent: (student: Omit<Student, 'id'>) => void;
+  updateStudent: (student: Student) => void;
+  removeStudent: (id: string) => void;
+  addTeacher: (teacher: Omit<Teacher, 'id'>) => void;
+  updateTeacher: (teacher: Teacher) => void;
+  removeTeacher: (id: string) => void;
+  addCourse: (course: Omit<Course, 'id'>) => void;
+  updateCourse: (course: Course) => void;
+  removeCourse: (id: string) => void;
+  addPartner: (partner: Omit<Partner, 'id'>) => void;
+  updatePartner: (partner: Partner) => void;
+  removePartner: (id: string) => void;
+  addUser: (user: Omit<User, 'id'>) => void;
+  updateUser: (user: User) => void;
+  removeUser: (id: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
+
+const STORAGE_KEYS = {
+  STUDENTS: 'gc_students',
+  TEACHERS: 'gc_teachers',
+  COURSES: 'gc_courses',
+  PARTNERS: 'gc_partners',
+  USERS: 'gc_users',
+};
 
 export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -44,137 +44,61 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tableStatuses, setTableStatuses] = useState<TableStatus[]>([]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    const statuses: TableStatus[] = [];
-    
-    try {
-      const tables = ['students', 'teachers', 'courses', 'partners', 'users'];
-      
-      const results = await Promise.all(
-        tables.map(table => supabase.from(table).select('*', { count: 'exact', head: false }))
-      );
-
-      results.forEach((res, index) => {
-        const tableName = tables[index];
-        if (res.error) {
-          statuses.push({ name: tableName, ok: false, error: res.error.message });
-        } else {
-          statuses.push({ name: tableName, ok: true });
-          if (tableName === 'students') setStudents(res.data || []);
-          if (tableName === 'teachers') setTeachers(res.data || []);
-          if (tableName === 'courses') setCourses(res.data || []);
-          if (tableName === 'partners') setPartners(res.data || []);
-          if (tableName === 'users') setUsers(res.data || []);
-        }
-      });
-
-      setTableStatuses(statuses);
-    } catch (error) {
-      console.error('Erro crítico de conexão:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const ensureInitialUsers = async () => {
-    try {
-      const usersToCreate = [
-        { name: 'Claudio A. Sousa', username: 'claudioasousa', password: 'cas661010', role: 'ADMIN' },
-        { name: 'Administrador Padrão', username: 'admin', password: 'admin', role: 'ADMIN' }
-      ];
-
-      for (const userData of usersToCreate) {
-        const { data: existing } = await supabase
-          .from('users')
-          .select('username')
-          .eq('username', userData.username)
-          .maybeSingle();
-
-        if (!existing) {
-          await supabase.from('users').insert([userData]);
-        }
-      }
-    } catch (err) {
-      console.debug("Tabelas não prontas para inserção de usuários padrão.");
-    }
-  };
 
   useEffect(() => {
-    const init = async () => {
-      await fetchData();
-      await ensureInitialUsers();
+    const load = () => {
+      setStudents(JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS) || '[]'));
+      setTeachers(JSON.parse(localStorage.getItem(STORAGE_KEYS.TEACHERS) || '[]'));
+      setCourses(JSON.parse(localStorage.getItem(STORAGE_KEYS.COURSES) || '[]'));
+      setPartners(JSON.parse(localStorage.getItem(STORAGE_KEYS.PARTNERS) || '[]'));
+      
+      const savedUsers = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
+      if (savedUsers.length === 0) {
+        const initialUsers = [
+          { id: '1', name: 'Claudio A. Sousa', username: 'claudioasousa', password: 'cas661010', role: 'ADMIN' },
+          { id: '2', name: 'Administrador', username: 'admin', password: 'admin', role: 'ADMIN' }
+        ];
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(initialUsers));
+        setUsers(initialUsers);
+      } else {
+        setUsers(savedUsers);
+      }
+      setLoading(false);
     };
-    init();
+    load();
   }, []);
 
-  const handleError = (error: any, action: string) => {
-    console.error(`Erro detalhado em ${action}:`, error);
-    let msg = `Erro ao ${action}: ${error.message}`;
-    
-    if (error.code === '42P01') {
-      msg = "Tabela não encontrada. Você precisa rodar o NOVO Script SQL no Supabase.";
-    } else if (error.code === '42703') {
-      msg = "Coluna não encontrada. Rode o novo script SQL para corrigir os nomes das colunas.";
-    } else if (error.message.includes('row-level security')) {
-      msg = "Permissão negada (RLS). Rode o novo script SQL para desativar o RLS das tabelas.";
-    } else if (error.code === '23505') {
-      msg = "Este registro já existe (duplicidade de CPF ou Usuário).";
-    }
-    
-    alert(msg);
+  const save = (key: string, data: any, setter: Function) => {
+    localStorage.setItem(key, JSON.stringify(data));
+    setter(data);
   };
 
-  const add = async (table: string, data: any) => {
-    const { error } = await supabase.from(table).insert([data]);
-    if (error) {
-      handleError(error, `cadastrar em ${table}`);
-      throw error;
-    }
-    await fetchData();
-  };
+  const generateId = () => Math.random().toString(36).substr(2, 9);
 
-  const update = async (table: string, data: any) => {
-    const { id, created_at, ...updates } = data;
-    const { error } = await supabase.from(table).update(updates).eq('id', id);
-    if (error) {
-      handleError(error, `atualizar em ${table}`);
-      throw error;
-    }
-    await fetchData();
-  };
-
-  const remove = async (table: string, id: string) => {
-    const { error } = await supabase.from(table).delete().eq('id', id);
-    if (error) {
-      handleError(error, `excluir em ${table}`);
-      throw error;
-    }
-    await fetchData();
-  };
-
-  const refreshData = async () => fetchData();
+  const refreshData = async () => {}; // No-op em local storage
 
   return (
     <DataContext.Provider value={{
-      students, teachers, courses, partners, users, loading, tableStatuses, refreshData,
-      addStudent: (d) => add('students', d),
-      updateStudent: (d) => update('students', d),
-      removeStudent: (id) => remove('students', id),
-      addTeacher: (d) => add('teachers', d),
-      updateTeacher: (d) => update('teachers', d),
-      removeTeacher: (id) => remove('teachers', id),
-      addCourse: (d) => add('courses', d),
-      updateCourse: (d) => update('courses', d),
-      removeCourse: (id) => remove('courses', id),
-      addPartner: (d) => add('partners', d),
-      updatePartner: (d) => update('partners', d),
-      removePartner: (id) => remove('partners', id),
-      addUser: (d) => add('users', d),
-      updateUser: (d) => update('users', d),
-      removeUser: (id) => remove('users', id)
+      students, teachers, courses, partners, users, loading, refreshData,
+      addStudent: (d) => save(STORAGE_KEYS.STUDENTS, [...students, { ...d, id: generateId() }], setStudents),
+      updateStudent: (d) => save(STORAGE_KEYS.STUDENTS, students.map(s => s.id === d.id ? d : s), setStudents),
+      removeStudent: (id) => save(STORAGE_KEYS.STUDENTS, students.filter(s => s.id !== id), setStudents),
+      
+      addTeacher: (d) => save(STORAGE_KEYS.TEACHERS, [...teachers, { ...d, id: generateId() }], setTeachers),
+      updateTeacher: (d) => save(STORAGE_KEYS.TEACHERS, teachers.map(t => t.id === d.id ? d : t), setTeachers),
+      removeTeacher: (id) => save(STORAGE_KEYS.TEACHERS, teachers.filter(t => t.id !== id), setTeachers),
+      
+      addCourse: (d) => save(STORAGE_KEYS.COURSES, [...courses, { ...d, id: generateId() }], setCourses),
+      updateCourse: (d) => save(STORAGE_KEYS.COURSES, courses.map(c => c.id === d.id ? d : c), setCourses),
+      removeCourse: (id) => save(STORAGE_KEYS.COURSES, courses.filter(c => c.id !== id), setCourses),
+      
+      addPartner: (d) => save(STORAGE_KEYS.PARTNERS, [...partners, { ...d, id: generateId() }], setPartners),
+      updatePartner: (d) => save(STORAGE_KEYS.PARTNERS, partners.map(p => p.id === d.id ? d : p), setPartners),
+      removePartner: (id) => save(STORAGE_KEYS.PARTNERS, partners.filter(p => p.id !== id), setPartners),
+      
+      addUser: (d) => save(STORAGE_KEYS.USERS, [...users, { ...d, id: generateId() }], setUsers),
+      updateUser: (d) => save(STORAGE_KEYS.USERS, users.map(u => u.id === d.id ? d : u), setUsers),
+      removeUser: (id) => save(STORAGE_KEYS.USERS, users.filter(u => u.id !== id), setUsers),
     }}>
       {children}
     </DataContext.Provider>
