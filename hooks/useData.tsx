@@ -41,15 +41,13 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const results = await Promise.all([
+      const [s, t, c, p, u] = await Promise.all([
         supabase.from('students').select('*'),
         supabase.from('teachers').select('*'),
         supabase.from('courses').select('*'),
         supabase.from('partners').select('*'),
         supabase.from('users').select('*')
       ]);
-
-      const [s, t, c, p, u] = results;
 
       if (s.data) setStudents(s.data);
       if (t.data) setTeachers(t.data);
@@ -58,7 +56,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
       if (u.data) setUsers(u.data);
 
     } catch (error) {
-      console.warn('Conexão ativa, mas algumas tabelas podem ainda não existir no Supabase.');
+      console.warn('Sync error or missing tables.');
     } finally {
       setLoading(false);
     }
@@ -66,15 +64,13 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   const ensureAdminUser = async () => {
     try {
-      // Busca específica pelo usuário claudioasousa
-      const { data: existingUser, error } = await supabase
+      const { data: existing } = await supabase
         .from('users')
         .select('username')
         .eq('username', 'claudioasousa')
         .maybeSingle();
 
-      if (!existingUser && !error) {
-        console.log('Criando usuário administrador inicial...');
+      if (!existing) {
         await supabase.from('users').insert([{
           name: 'Claudio A. Sousa',
           username: 'claudioasousa',
@@ -83,9 +79,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         }]);
         await fetchData();
       }
-    } catch (err) {
-      // Tabela de usuários pode não estar pronta ainda
-    }
+    } catch (err) {}
   };
 
   useEffect(() => {
@@ -101,7 +95,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const add = async (table: string, data: any) => {
     const { error } = await supabase.from(table).insert([data]);
     if (error) {
-        alert('Atenção: Use o botão "Gerar Script SQL" no Dashboard para criar as tabelas no seu projeto Supabase antes de inserir dados.');
+        alert('Tabelas não encontradas. Vá ao Dashboard e clique em "Gerar Script SQL" para configurar seu Supabase.');
         throw error;
     }
     await fetchData();
@@ -123,19 +117,15 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const addStudent = (data: any) => add('students', data);
   const updateStudent = (data: any) => update('students', data);
   const removeStudent = (id: string) => remove('students', id);
-
   const addTeacher = (data: any) => add('teachers', data);
   const updateTeacher = (data: any) => update('teachers', data);
   const removeTeacher = (id: string) => remove('teachers', id);
-
   const addCourse = (data: any) => add('courses', data);
   const updateCourse = (data: any) => update('courses', data);
   const removeCourse = (id: string) => remove('courses', id);
-
   const addPartner = (data: any) => add('partners', data);
   const updatePartner = (data: any) => update('partners', data);
   const removePartner = (id: string) => remove('partners', id);
-
   const addUser = (data: any) => add('users', data);
   const updateUser = (data: any) => update('users', data);
   const removeUser = (id: string) => remove('users', id);

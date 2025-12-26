@@ -15,8 +15,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [user, setUser] = useState<User | null>(() => {
-    const savedLocal = localStorage.getItem('gestao_cursos_session');
-    const savedSession = sessionStorage.getItem('gestao_cursos_session');
+    const savedLocal = localStorage.getItem('gestao_cursos_user_session');
+    const savedSession = sessionStorage.getItem('gestao_cursos_user_session');
     const saved = savedLocal || savedSession;
     return saved ? JSON.parse(saved) : null;
   });
@@ -26,63 +26,65 @@ export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('username', username.toLowerCase())
+        .eq('username', username.toLowerCase().trim())
         .eq('password', password)
         .single();
 
       if (error || !data) return false;
 
-      // Sanitizar dados sensíveis antes de salvar na sessão
+      // Remove a senha antes de persistir no estado/storage
       const { password: _, ...userSession } = data;
-      setUser(userSession as User);
+      const finalUser = userSession as User;
+      
+      setUser(finalUser);
       
       const storage = rememberMe ? localStorage : sessionStorage;
-      storage.setItem('gestao_cursos_session', JSON.stringify(userSession));
+      storage.setItem('gestao_cursos_user_session', JSON.stringify(finalUser));
       
-      // Limpar storage oposto para evitar conflitos de sessão
-      if (rememberMe) sessionStorage.removeItem('gestao_cursos_session');
-      else localStorage.removeItem('gestao_cursos_session');
+      // Limpa storage oposto
+      if (rememberMe) sessionStorage.removeItem('gestao_cursos_user_session');
+      else localStorage.removeItem('gestao_cursos_user_session');
 
       return true;
     } catch (err) {
-      console.error('Erro na autenticação:', err);
+      console.error('Auth Error:', err);
       return false;
     }
   };
 
   const signUp = async (name: string, username: string, password: string): Promise<{success: boolean, message: string}> => {
     try {
-      // Validar se o usuário já existe no sistema
+      const cleanUsername = username.toLowerCase().trim();
+      
       const { data: existing } = await supabase
         .from('users')
         .select('username')
-        .eq('username', username.toLowerCase())
+        .eq('username', cleanUsername)
         .maybeSingle();
 
       if (existing) {
-        return { success: false, message: 'O nome de usuário já está em uso.' };
+        return { success: false, message: 'Este usuário já está cadastrado.' };
       }
 
       const { error } = await supabase.from('users').insert([{
         name,
-        username: username.toLowerCase(),
+        username: cleanUsername,
         password,
-        role: 'OPERATOR' // Novos cadastros iniciam como operadores por padrão
+        role: 'OPERATOR'
       }]);
 
       if (error) throw error;
 
-      return { success: true, message: 'Conta criada com sucesso! Você já pode entrar.' };
+      return { success: true, message: 'Conta criada! Faça login para continuar.' };
     } catch (err) {
-      console.error('Erro no cadastro:', err);
-      return { success: false, message: 'Falha ao processar cadastro. Tente novamente.' };
+      return { success: false, message: 'Erro ao conectar com o banco de dados.' };
     }
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('gestao_cursos_session');
-    sessionStorage.removeItem('gestao_cursos_session');
+    localStorage.removeItem('gestao_cursos_user_session');
+    sessionStorage.removeItem('gestao_cursos_user_session');
   };
 
   const isAdmin = user?.role === 'ADMIN';
