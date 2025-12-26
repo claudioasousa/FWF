@@ -1,12 +1,20 @@
 
-export const DATABASE_SCHEMA_SQL = `-- SCRIPT DE CONFIGURAÇÃO DO BANCO DE DADOS (VERSÃO FINAL CORRIGIDA)
+export const DATABASE_SCHEMA_SQL = `-- SCRIPT DE RECONSTRUÇÃO TOTAL DO BANCO DE DADOS
+-- ATENÇÃO: Este script irá apagar os dados existentes e recriar as tabelas corretamente.
 -- Cole este código no SQL Editor do seu projeto Supabase e clique em RUN.
 
 -- Habilitar extensão para geração de UUIDs
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- 0. Limpar tabelas existentes para evitar conflitos de schema cache
+DROP TABLE IF EXISTS students CASCADE;
+DROP TABLE IF EXISTS courses CASCADE;
+DROP TABLE IF EXISTS partners CASCADE;
+DROP TABLE IF EXISTS teachers CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
 -- 1. Tabela de Usuários
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     name TEXT NOT NULL,
@@ -17,7 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 
 -- 2. Tabela de Professores
-CREATE TABLE IF NOT EXISTS teachers (
+CREATE TABLE teachers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     name TEXT NOT NULL,
@@ -27,8 +35,8 @@ CREATE TABLE IF NOT EXISTS teachers (
 );
 ALTER TABLE teachers DISABLE ROW LEVEL SECURITY;
 
--- 3. Tabela de Parceiros (Aspas duplas preservam o Case-Sensitivity)
-CREATE TABLE IF NOT EXISTS partners (
+-- 3. Tabela de Parceiros
+CREATE TABLE partners (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     "companyName" TEXT NOT NULL,
@@ -39,7 +47,7 @@ CREATE TABLE IF NOT EXISTS partners (
 ALTER TABLE partners DISABLE ROW LEVEL SECURITY;
 
 -- 4. Tabela de Cursos
-CREATE TABLE IF NOT EXISTS courses (
+CREATE TABLE courses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     name TEXT NOT NULL,
@@ -57,7 +65,7 @@ CREATE TABLE IF NOT EXISTS courses (
 ALTER TABLE courses DISABLE ROW LEVEL SECURITY;
 
 -- 5. Tabela de Alunos
-CREATE TABLE IF NOT EXISTS students (
+CREATE TABLE students (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     name TEXT NOT NULL,
@@ -73,9 +81,7 @@ ALTER TABLE students DISABLE ROW LEVEL SECURITY;
 
 -- Inserir usuários iniciais
 INSERT INTO users (name, username, password, role)
-VALUES ('Claudio A. Sousa', 'claudioasousa', 'cas661010', 'ADMIN')
-ON CONFLICT (username) DO NOTHING;
+VALUES ('Claudio A. Sousa', 'claudioasousa', 'cas661010', 'ADMIN');
 
 INSERT INTO users (name, username, password, role)
-VALUES ('Administrador Padrão', 'admin', 'admin', 'ADMIN')
-ON CONFLICT (username) DO NOTHING;`;
+VALUES ('Administrador Padrão', 'admin', 'admin', 'ADMIN');`;
