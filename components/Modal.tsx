@@ -1,8 +1,6 @@
 
 import React, { ReactNode } from 'react';
 
-// FIX: Use React.PropsWithChildren to correctly type components that accept children.
-// This removes the `children` property from the interface and adds it via PropsWithChildren.
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -14,20 +12,25 @@ const Modal = ({ isOpen, onClose, title, children }: React.PropsWithChildren<Mod
 
   return (
     <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-center" 
+        className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[150] flex justify-center items-center p-4 transition-all" 
         onClick={onClose}
         aria-modal="true"
         role="dialog"
     >
       <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md m-4 z-50"
+        className="bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 dark:border-slate-800 animate-fadeIn"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center border-b pb-3 mb-4 dark:border-gray-600">
-          <h2 className="text-xl font-semibold">{title}</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:hover:text-white">&times;</button>
+        <div className="px-8 py-6 flex justify-between items-center border-b border-slate-50 dark:border-slate-800">
+          <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{title}</h2>
+          <button 
+            onClick={onClose} 
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors"
+          >
+            &times;
+          </button>
         </div>
-        <div>
+        <div className="p-8">
           {children}
         </div>
       </div>

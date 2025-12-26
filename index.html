@@ -10,6 +10,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
+        /* Transição Suave de Tema */
+        *, *::before, *::after {
+            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                        border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                        color 0.2s linear;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -17,8 +24,11 @@
         .animate-fadeIn {
             animation: fadeIn 0.4s ease-out forwards;
         }
+
+        /* Scrollbar Customizada */
         .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
+            width: 6px;
+            height: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
             background: transparent;
@@ -28,7 +38,15 @@
             border-radius: 10px;
         }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #475569;
+            background: #334155;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Melhoria de contraste para modo escuro */
+        .dark body {
+            background-color: #0f172a; /* Slate 950 */
         }
     </style>
 <script type="importmap">
@@ -42,7 +60,7 @@
 }
 </script>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 overflow-hidden">
+<body class="bg-gray-50 dark:bg-slate-950 overflow-hidden">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>
