@@ -1,8 +1,11 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useData } from '../hooks/useData';
+import { useAuth } from '../hooks/useAuth';
 import { UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, PlusIcon, ClipboardListIcon } from '../components/Icons';
 import { NavLink } from 'react-router-dom';
+import { DATABASE_SCHEMA_SQL } from '../constants/databaseSchema';
+import Modal from '../components/Modal';
 
 const StatCard = ({ title, value, icon, color, trend }: { title: string; value: number; icon: React.ReactNode; color: string; trend?: string }) => (
     <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden relative">
@@ -37,6 +40,9 @@ const QuickAction = ({ to, label, icon, bg }: { to: string; label: string; icon:
 
 const Dashboard = () => {
     const { students, courses, teachers, partners } = useData();
+    const { isAdmin } = useAuth();
+    const [isSchemaModalOpen, setIsSchemaModalOpen] = useState(false);
+    const [copySuccess, setCopySuccess] = useState(false);
 
     const studentStats = useMemo(() => {
         return {
@@ -50,11 +56,27 @@ const Dashboard = () => {
         return [...students].reverse().slice(0, 5);
     }, [students]);
 
+    const handleCopySQL = () => {
+        navigator.clipboard.writeText(DATABASE_SCHEMA_SQL);
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+    };
+
     return (
         <div className="animate-fadeIn max-w-7xl mx-auto space-y-10 pb-10">
-            <header>
-                <h1 className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">Painel de Gestão</h1>
-                <p className="text-gray-500 dark:text-gray-400 mt-3 text-lg font-medium">Controle operacional e métricas em tempo real.</p>
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <h1 className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">Painel de Gestão</h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-3 text-lg font-medium">Controle operacional e métricas em tempo real.</p>
+                </div>
+                {isAdmin && (
+                    <button 
+                        onClick={() => setIsSchemaModalOpen(true)}
+                        className="px-6 py-3 bg-gray-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-gray-900/20"
+                    >
+                        Script SQL do Banco
+                    </button>
+                )}
             </header>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -108,6 +130,25 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            <Modal isOpen={isSchemaModalOpen} onClose={() => setIsSchemaModalOpen(false)} title="Schema SQL Gerado">
+                <div className="space-y-4">
+                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-relaxed">
+                        Este script cria a estrutura necessária em qualquer banco PostgreSQL.
+                    </p>
+                    <div className="relative">
+                        <pre className="bg-gray-900 text-blue-400 p-6 rounded-2xl text-[10px] font-mono overflow-x-auto max-h-[400px] custom-scrollbar border border-gray-800">
+                            {DATABASE_SCHEMA_SQL}
+                        </pre>
+                        <button 
+                            onClick={handleCopySQL}
+                            className={`absolute top-4 right-4 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copySuccess ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                        >
+                            {copySuccess ? 'Copiado!' : 'Copiar SQL'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };
