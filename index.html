@@ -10,13 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
-        /* Transição Suave de Tema */
-        *, *::before, *::after {
-            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                        border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                        color 0.2s linear;
-        }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -42,11 +35,6 @@
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
-        }
-
-        /* Melhoria de contraste para modo escuro */
-        .dark body {
-            background-color: #0f172a; /* Slate 950 */
         }
     </style>
 <script type="importmap">

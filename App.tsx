@@ -13,7 +13,6 @@ import UsersPage from './pages/UsersPage';
 import LoginPage from './pages/LoginPage';
 import { DataProvider } from './hooks/useData';
 import { AuthProvider, useAuth } from './hooks/useAuth';
-import { ThemeProvider } from './hooks/useTheme';
 
 const AppContent = () => {
   const { user } = useAuth();
@@ -46,13 +45,11 @@ const AppContent = () => {
 
 function App() {
   return (
-    <ThemeProvider>
-      <DataProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </DataProvider>
-    </ThemeProvider>
+    <DataProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </DataProvider>
   );
 }
 
