@@ -69,20 +69,23 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   const ensureAdminUser = async () => {
     try {
+      // Verifica se o usuário específico claudioasousa já existe
       const { data: existingUser, error } = await supabase
         .from('users')
         .select('username')
-        .eq('username', 'claudio')
+        .eq('username', 'claudioasousa')
         .maybeSingle();
 
       if (!existingUser && !error) {
+        // Cria o usuário administrador conforme solicitado
         await supabase.from('users').insert([{
-          name: 'Claudio',
-          username: 'claudio',
-          password: 'qwe123',
+          name: 'Claudio A. Sousa',
+          username: 'claudioasousa',
+          password: 'cas661010',
           role: 'ADMIN'
         }]);
         await fetchData();
+        console.log('Usuário claudioasousa criado com sucesso.');
       }
     } catch (err) {
       console.error('Falha ao verificar/criar usuário admin padrão:', err);
@@ -99,7 +102,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   const refreshData = async () => fetchData();
 
-  // Operações Genéricas para Supabase
   const add = async (table: string, data: any) => {
     const { error } = await supabase.from(table).insert([data]);
     if (error) throw error;
@@ -119,7 +121,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     await fetchData();
   };
 
-  // Mapeamento para as funções exportadas
   const addStudent = (data: any) => add('students', data);
   const updateStudent = (data: any) => update('students', data);
   const removeStudent = (id: string) => remove('students', id);
