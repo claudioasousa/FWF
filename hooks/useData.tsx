@@ -111,11 +111,13 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   }, []);
 
   const handleError = (error: any, action: string) => {
-    console.error(`Erro em ${action}:`, error);
+    console.error(`Erro detalhado em ${action}:`, error);
     let msg = `Erro ao ${action}: ${error.message}`;
     
     if (error.code === '42P01') {
-      msg = "Tabela não encontrada. Você precisa rodar o Script SQL no Supabase.";
+      msg = "Tabela não encontrada. Você precisa rodar o NOVO Script SQL no Supabase.";
+    } else if (error.code === '42703') {
+      msg = "Coluna não encontrada. Rode o novo script SQL para corrigir os nomes das colunas.";
     } else if (error.message.includes('row-level security')) {
       msg = "Permissão negada (RLS). Rode o novo script SQL para desativar o RLS das tabelas.";
     } else if (error.code === '23505') {

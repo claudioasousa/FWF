@@ -1,5 +1,5 @@
 
-export const DATABASE_SCHEMA_SQL = `-- SCRIPT DE CONFIGURAÇÃO DO BANCO DE DADOS (VERSÃO CORRIGIDA)
+export const DATABASE_SCHEMA_SQL = `-- SCRIPT DE CONFIGURAÇÃO DO BANCO DE DADOS (VERSÃO FINAL CORRIGIDA)
 -- Cole este código no SQL Editor do seu projeto Supabase e clique em RUN.
 
 -- Habilitar extensão para geração de UUIDs
@@ -27,11 +27,11 @@ CREATE TABLE IF NOT EXISTS teachers (
 );
 ALTER TABLE teachers DISABLE ROW LEVEL SECURITY;
 
--- 3. Tabela de Parceiros
+-- 3. Tabela de Parceiros (Aspas duplas preservam o Case-Sensitivity)
 CREATE TABLE IF NOT EXISTS partners (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    companyName TEXT NOT NULL,
+    "companyName" TEXT NOT NULL,
     responsible TEXT,
     contact TEXT,
     address TEXT
@@ -44,14 +44,14 @@ CREATE TABLE IF NOT EXISTS courses (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     name TEXT NOT NULL,
     workload INTEGER DEFAULT 0,
-    startDate DATE,
-    endDate DATE,
-    startTime TIME,
-    endTime TIME,
+    "startDate" DATE,
+    "endDate" DATE,
+    "startTime" TIME,
+    "endTime" TIME,
     period TEXT,
     location TEXT,
-    partnerId UUID REFERENCES partners(id) ON DELETE SET NULL,
-    teacherIds TEXT[],
+    "partnerId" UUID REFERENCES partners(id) ON DELETE SET NULL,
+    "teacherIds" TEXT[],
     status TEXT DEFAULT 'Ativo'
 );
 ALTER TABLE courses DISABLE ROW LEVEL SECURITY;
@@ -63,9 +63,9 @@ CREATE TABLE IF NOT EXISTS students (
     name TEXT NOT NULL,
     cpf TEXT,
     contact TEXT,
-    birthDate DATE,
+    "birthDate" DATE,
     address TEXT,
-    courseId UUID REFERENCES courses(id) ON DELETE SET NULL,
+    "courseId" UUID REFERENCES courses(id) ON DELETE SET NULL,
     status TEXT DEFAULT 'CURSANDO',
     class TEXT
 );
