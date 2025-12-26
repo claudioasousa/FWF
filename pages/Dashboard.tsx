@@ -39,9 +39,10 @@ const QuickAction = ({ to, label, icon, bg }: { to: string; label: string; icon:
 );
 
 const Dashboard = () => {
-    const { students, courses, teachers, partners } = useData();
+    const { students, courses, teachers, partners, loading, tableStatuses, refreshData } = useData();
     const { isAdmin } = useAuth();
     const [isSchemaModalOpen, setIsSchemaModalOpen] = useState(false);
+    const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
 
     const studentStats = useMemo(() => {
@@ -62,6 +63,8 @@ const Dashboard = () => {
         setTimeout(() => setCopySuccess(false), 2000);
     };
 
+    const connectionOk = tableStatuses.length > 0 && tableStatuses.every(s => s.ok);
+
     return (
         <div className="animate-fadeIn max-w-7xl mx-auto space-y-10 pb-10">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -69,14 +72,25 @@ const Dashboard = () => {
                     <h1 className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">Painel de Gestão</h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-3 text-lg font-medium">Controle operacional e métricas em tempo real.</p>
                 </div>
-                {isAdmin && (
+                <div className="flex gap-3">
                     <button 
-                        onClick={() => setIsSchemaModalOpen(true)}
-                        className="px-6 py-3 bg-gray-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-gray-900/20"
+                        onClick={() => setIsHealthModalOpen(true)}
+                        className={`px-5 py-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border ${connectionOk ? 'border-emerald-100' : 'border-rose-100'} flex items-center transition-all hover:scale-105`}
                     >
-                        Script SQL do Banco
+                        <div className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500 animate-bounce' : (connectionOk ? 'bg-emerald-500' : 'bg-rose-500')} mr-3`}></div>
+                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                            {loading ? 'Sincronizando...' : (connectionOk ? 'Supabase Online' : 'Atenção ao Banco')}
+                        </span>
                     </button>
-                )}
+                    {isAdmin && (
+                        <button 
+                            onClick={() => setIsSchemaModalOpen(true)}
+                            className="px-6 py-3 bg-gray-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-gray-900/20"
+                        >
+                            Script SQL
+                        </button>
+                    )}
+                </div>
             </header>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -95,7 +109,10 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <div className="lg:col-span-2">
                     <div className="bg-white dark:bg-gray-800 p-10 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700">
-                        <h2 className="text-2xl font-black mb-8 tracking-tight">Status Acadêmico</h2>
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className="text-2xl font-black tracking-tight">Status Acadêmico</h2>
+                            <button onClick={refreshData} className="text-[10px] font-black uppercase text-blue-500 hover:underline">Atualizar Dados</button>
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
                             <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl text-center">
                                 <p className="text-[10px] font-black uppercase text-blue-400 mb-1">Cursando</p>
@@ -134,7 +151,7 @@ const Dashboard = () => {
             <Modal isOpen={isSchemaModalOpen} onClose={() => setIsSchemaModalOpen(false)} title="Schema SQL Gerado">
                 <div className="space-y-4">
                     <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-relaxed">
-                        Este script cria a estrutura necessária em qualquer banco PostgreSQL.
+                        Execute este script no console SQL do Supabase para criar as tabelas necessárias.
                     </p>
                     <div className="relative">
                         <pre className="bg-gray-900 text-blue-400 p-6 rounded-2xl text-[10px] font-mono overflow-x-auto max-h-[400px] custom-scrollbar border border-gray-800">
@@ -147,6 +164,26 @@ const Dashboard = () => {
                             {copySuccess ? 'Copiado!' : 'Copiar SQL'}
                         </button>
                     </div>
+                </div>
+            </Modal>
+
+            <Modal isOpen={isHealthModalOpen} onClose={() => setIsHealthModalOpen(false)} title="Saúde das Tabelas">
+                <div className="space-y-3">
+                    {tableStatuses.map(status => (
+                        <div key={status.name} className={`p-4 rounded-2xl border flex items-center justify-between ${status.ok ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-rose-50 border-rose-100 text-rose-700'}`}>
+                            <span className="font-black text-sm uppercase">{status.name}</span>
+                            <span className="text-[10px] font-black uppercase px-2 py-1 bg-white/50 rounded-lg">
+                                {status.ok ? 'Sincronizado' : 'Erro de Conexão'}
+                            </span>
+                        </div>
+                    ))}
+                    {!connectionOk && (
+                        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                            <p className="text-[10px] font-bold text-amber-700 uppercase leading-relaxed">
+                                ⚠️ Se alguma tabela estiver com erro, certifique-se de que você executou o script SQL no Supabase.
+                            </p>
+                        </div>
+                    )}
                 </div>
             </Modal>
         </div>

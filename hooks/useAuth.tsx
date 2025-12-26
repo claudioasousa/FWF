@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState } from 'react';
+import { supabase } from '../lib/supabase';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -21,12 +22,19 @@ export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
   });
 
   const login = async (username: string, password: string, rememberMe: boolean): Promise<boolean> => {
-    const users: User[] = JSON.parse(localStorage.getItem('gc_users') || '[]');
-    const foundUser = users.find(u => u.username.toLowerCase() === username.toLowerCase().trim() && u.password === password);
+    if (!supabase) return false;
 
-    if (!foundUser) return false;
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username.toLowerCase().trim())
+      .eq('password', password);
 
+    if (error || !users || users.length === 0) return false;
+
+    const foundUser = users[0];
     const { password: _, ...userSession } = foundUser;
+    
     setUser(userSession as User);
     
     const storage = rememberMe ? localStorage : sessionStorage;
@@ -36,22 +44,28 @@ export const AuthProvider = ({ children }: React.PropsWithChildren<{}>) => {
   };
 
   const signUp = async (name: string, username: string, password: string): Promise<{success: boolean, message: string}> => {
-    const users: User[] = JSON.parse(localStorage.getItem('gc_users') || '[]');
+    if (!supabase) return { success: false, message: 'Serviço indisponível.' };
+
     const cleanUsername = username.toLowerCase().trim();
     
-    if (users.find(u => u.username.toLowerCase() === cleanUsername)) {
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('username', cleanUsername);
+
+    if (existing && existing.length > 0) {
       return { success: false, message: 'Usuário já existe.' };
     }
 
-    const newUser = {
-      id: Math.random().toString(36).substr(2, 9),
+    const { error } = await supabase.from('users').insert([{
       name,
       username: cleanUsername,
       password,
-      role: 'OPERATOR' as const
-    };
+      role: 'OPERATOR'
+    }]);
 
-    localStorage.setItem('gc_users', JSON.stringify([...users, newUser]));
+    if (error) return { success: false, message: 'Erro ao criar conta.' };
+
     return { success: true, message: 'Conta criada com sucesso!' };
   };
 

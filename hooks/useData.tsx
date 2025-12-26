@@ -1,6 +1,12 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import type { Student, Teacher, Course, Partner, User } from '../types';
+
+interface TableStatus {
+  name: string;
+  ok: boolean;
+}
 
 interface DataContextType {
   students: Student[];
@@ -9,33 +15,26 @@ interface DataContextType {
   partners: Partner[];
   users: User[];
   loading: boolean;
+  tableStatuses: TableStatus[];
   refreshData: () => Promise<void>;
-  addStudent: (student: Omit<Student, 'id'>) => void;
-  updateStudent: (student: Student) => void;
-  removeStudent: (id: string) => void;
-  addTeacher: (teacher: Omit<Teacher, 'id'>) => void;
-  updateTeacher: (teacher: Teacher) => void;
-  removeTeacher: (id: string) => void;
-  addCourse: (course: Omit<Course, 'id'>) => void;
-  updateCourse: (course: Course) => void;
-  removeCourse: (id: string) => void;
-  addPartner: (partner: Omit<Partner, 'id'>) => void;
-  updatePartner: (partner: Partner) => void;
-  removePartner: (id: string) => void;
-  addUser: (user: Omit<User, 'id'>) => void;
-  updateUser: (user: User) => void;
-  removeUser: (id: string) => void;
+  addStudent: (student: Omit<Student, 'id'>) => Promise<void>;
+  updateStudent: (student: Student) => Promise<void>;
+  removeStudent: (id: string) => Promise<void>;
+  addTeacher: (teacher: Omit<Teacher, 'id'>) => Promise<void>;
+  updateTeacher: (teacher: Teacher) => Promise<void>;
+  removeTeacher: (id: string) => Promise<void>;
+  addCourse: (course: Omit<Course, 'id'>) => Promise<void>;
+  updateCourse: (course: Course) => Promise<void>;
+  removeCourse: (id: string) => Promise<void>;
+  addPartner: (partner: Omit<Partner, 'id'>) => Promise<void>;
+  updatePartner: (partner: Partner) => Promise<void>;
+  removePartner: (id: string) => Promise<void>;
+  addUser: (user: Omit<User, 'id'>) => Promise<void>;
+  updateUser: (user: User) => Promise<void>;
+  removeUser: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
-
-const STORAGE_KEYS = {
-  STUDENTS: 'gc_students',
-  TEACHERS: 'gc_teachers',
-  COURSES: 'gc_courses',
-  PARTNERS: 'gc_partners',
-  USERS: 'gc_users',
-};
 
 export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -44,61 +43,182 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tableStatuses, setTableStatuses] = useState<TableStatus[]>([]);
 
-  useEffect(() => {
-    const load = () => {
-      setStudents(JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS) || '[]'));
-      setTeachers(JSON.parse(localStorage.getItem(STORAGE_KEYS.TEACHERS) || '[]'));
-      setCourses(JSON.parse(localStorage.getItem(STORAGE_KEYS.COURSES) || '[]'));
-      setPartners(JSON.parse(localStorage.getItem(STORAGE_KEYS.PARTNERS) || '[]'));
-      
-      const savedUsers = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-      if (savedUsers.length === 0) {
-        const initialUsers = [
-          { id: '1', name: 'Claudio A. Sousa', username: 'claudioasousa', password: 'cas661010', role: 'ADMIN' },
-          { id: '2', name: 'Administrador', username: 'admin', password: 'admin', role: 'ADMIN' }
-        ];
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(initialUsers));
-        setUsers(initialUsers);
-      } else {
-        setUsers(savedUsers);
-      }
+  const refreshData = async () => {
+    if (!supabase) return;
+    setLoading(true);
+    const statuses: TableStatus[] = [];
+
+    try {
+      // Fetch Partners
+      const { data: pData, error: pErr } = await supabase.from('partners').select('*');
+      if (pData) setPartners(pData.map(p => ({
+        id: p.id,
+        companyName: p.company_name,
+        responsible: p.responsible,
+        contact: p.contact,
+        address: p.address
+      })));
+      statuses.push({ name: 'Parceiros', ok: !pErr });
+
+      // Fetch Teachers
+      const { data: tData, error: tErr } = await supabase.from('teachers').select('*');
+      if (tData) setTeachers(tData);
+      statuses.push({ name: 'Professores', ok: !tErr });
+
+      // Fetch Courses
+      const { data: cData, error: cErr } = await supabase.from('courses').select('*');
+      if (cData) setCourses(cData.map(c => ({
+        id: c.id,
+        name: c.name,
+        workload: c.workload,
+        startDate: c.start_date,
+        endDate: c.end_date,
+        startTime: c.start_time,
+        endTime: c.end_time,
+        period: c.period,
+        location: c.location,
+        partnerId: c.partner_id,
+        status: c.status,
+        teacherIds: [] // Mapeamento N:N simplificado para este exemplo
+      })));
+      statuses.push({ name: 'Cursos', ok: !cErr });
+
+      // Fetch Students
+      const { data: sData, error: sErr } = await supabase.from('students').select('*');
+      if (sData) setStudents(sData.map(s => ({
+        id: s.id,
+        name: s.name,
+        cpf: s.cpf,
+        contact: s.contact,
+        birthDate: s.birth_date,
+        address: s.address,
+        courseId: s.course_id,
+        status: s.status,
+        class: s.class
+      })));
+      statuses.push({ name: 'Alunos', ok: !sErr });
+
+      // Fetch Users
+      const { data: uData, error: uErr } = await supabase.from('users').select('*');
+      if (uData) setUsers(uData);
+      statuses.push({ name: 'Usuários', ok: !uErr });
+
+      setTableStatuses(statuses);
+    } catch (err) {
+      console.error('Erro ao sincronizar com Supabase:', err);
+    } finally {
       setLoading(false);
-    };
-    load();
-  }, []);
-
-  const save = (key: string, data: any, setter: Function) => {
-    localStorage.setItem(key, JSON.stringify(data));
-    setter(data);
+    }
   };
 
-  const generateId = () => Math.random().toString(36).substr(2, 9);
+  useEffect(() => {
+    refreshData();
+  }, []);
 
-  const refreshData = async () => {}; // No-op em local storage
+  // CRUD Operations
+  const addStudent = async (d: Omit<Student, 'id'>) => {
+    await supabase.from('students').insert([{
+      name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate,
+      address: d.address, course_id: d.courseId || null, status: d.status, class: d.class
+    }]);
+    await refreshData();
+  };
+
+  const updateStudent = async (d: Student) => {
+    await supabase.from('students').update({
+      name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate,
+      address: d.address, course_id: d.courseId || null, status: d.status, class: d.class
+    }).eq('id', d.id);
+    await refreshData();
+  };
+
+  const removeStudent = async (id: string) => {
+    await supabase.from('students').delete().eq('id', id);
+    await refreshData();
+  };
+
+  const addCourse = async (d: Omit<Course, 'id'>) => {
+    await supabase.from('courses').insert([{
+      name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate,
+      start_time: d.startTime, end_time: d.endTime, period: d.period,
+      location: d.location, partner_id: d.partnerId || null, status: d.status
+    }]);
+    await refreshData();
+  };
+
+  const updateCourse = async (d: Course) => {
+    await supabase.from('courses').update({
+      name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate,
+      start_time: d.startTime, end_time: d.endTime, period: d.period,
+      location: d.location, partner_id: d.partnerId || null, status: d.status
+    }).eq('id', d.id);
+    await refreshData();
+  };
+
+  const removeCourse = async (id: string) => {
+    await supabase.from('courses').delete().eq('id', id);
+    await refreshData();
+  };
+
+  const addTeacher = async (d: Omit<Teacher, 'id'>) => {
+    await supabase.from('teachers').insert([d]);
+    await refreshData();
+  };
+
+  const updateTeacher = async (d: Teacher) => {
+    await supabase.from('teachers').update(d).eq('id', d.id);
+    await refreshData();
+  };
+
+  const removeTeacher = async (id: string) => {
+    await supabase.from('teachers').delete().eq('id', id);
+    await refreshData();
+  };
+
+  const addPartner = async (d: Omit<Partner, 'id'>) => {
+    await supabase.from('partners').insert([{
+      company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address
+    }]);
+    await refreshData();
+  };
+
+  const updatePartner = async (d: Partner) => {
+    await supabase.from('partners').update({
+      company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address
+    }).eq('id', d.id);
+    await refreshData();
+  };
+
+  const removePartner = async (id: string) => {
+    await supabase.from('partners').delete().eq('id', id);
+    await refreshData();
+  };
+
+  const addUser = async (d: Omit<User, 'id'>) => {
+    await supabase.from('users').insert([d]);
+    await refreshData();
+  };
+
+  const updateUser = async (d: User) => {
+    await supabase.from('users').update(d).eq('id', d.id);
+    await refreshData();
+  };
+
+  const removeUser = async (id: string) => {
+    await supabase.from('users').delete().eq('id', id);
+    await refreshData();
+  };
 
   return (
     <DataContext.Provider value={{
-      students, teachers, courses, partners, users, loading, refreshData,
-      addStudent: (d) => save(STORAGE_KEYS.STUDENTS, [...students, { ...d, id: generateId() }], setStudents),
-      updateStudent: (d) => save(STORAGE_KEYS.STUDENTS, students.map(s => s.id === d.id ? d : s), setStudents),
-      removeStudent: (id) => save(STORAGE_KEYS.STUDENTS, students.filter(s => s.id !== id), setStudents),
-      
-      addTeacher: (d) => save(STORAGE_KEYS.TEACHERS, [...teachers, { ...d, id: generateId() }], setTeachers),
-      updateTeacher: (d) => save(STORAGE_KEYS.TEACHERS, teachers.map(t => t.id === d.id ? d : t), setTeachers),
-      removeTeacher: (id) => save(STORAGE_KEYS.TEACHERS, teachers.filter(t => t.id !== id), setTeachers),
-      
-      addCourse: (d) => save(STORAGE_KEYS.COURSES, [...courses, { ...d, id: generateId() }], setCourses),
-      updateCourse: (d) => save(STORAGE_KEYS.COURSES, courses.map(c => c.id === d.id ? d : c), setCourses),
-      removeCourse: (id) => save(STORAGE_KEYS.COURSES, courses.filter(c => c.id !== id), setCourses),
-      
-      addPartner: (d) => save(STORAGE_KEYS.PARTNERS, [...partners, { ...d, id: generateId() }], setPartners),
-      updatePartner: (d) => save(STORAGE_KEYS.PARTNERS, partners.map(p => p.id === d.id ? d : p), setPartners),
-      removePartner: (id) => save(STORAGE_KEYS.PARTNERS, partners.filter(p => p.id !== id), setPartners),
-      
-      addUser: (d) => save(STORAGE_KEYS.USERS, [...users, { ...d, id: generateId() }], setUsers),
-      updateUser: (d) => save(STORAGE_KEYS.USERS, users.map(u => u.id === d.id ? d : u), setUsers),
-      removeUser: (id) => save(STORAGE_KEYS.USERS, users.filter(u => u.id !== id), setUsers),
+      students, teachers, courses, partners, users, loading, tableStatuses, refreshData,
+      addStudent, updateStudent, removeStudent,
+      addTeacher, updateTeacher, removeTeacher,
+      addCourse, updateCourse, removeCourse,
+      addPartner, updatePartner, removePartner,
+      addUser, updateUser, removeUser
     }}>
       {children}
     </DataContext.Provider>
