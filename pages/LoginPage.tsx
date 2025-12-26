@@ -9,7 +9,6 @@ const LoginPage = () => {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
   
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -37,7 +36,8 @@ const LoginPage = () => {
           setError(result.message);
         }
       } else {
-        const success = await login(username, password, rememberMe);
+        // Por padrão, manteremos a sessão persistente (true) para melhor experiência do usuário
+        const success = await login(username, password, true);
         if (!success) {
           setError('Usuário ou senha incorretos.');
         }
@@ -123,21 +123,6 @@ const LoginPage = () => {
                 required
               />
             </div>
-
-            {!isRegistering && (
-              <div className="flex items-center gap-2 ml-3">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                />
-                <label htmlFor="remember" className="text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer select-none">
-                  Permanecer conectado
-                </label>
-              </div>
-            )}
 
             <button
               type="submit"
