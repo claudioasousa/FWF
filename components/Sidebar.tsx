@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+// Fix: Import from react-router to resolve missing member error in some environments
+import { NavLink } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
 import { HomeIcon, UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, ClipboardListIcon, FileDownIcon, ShieldIcon, XIcon } from './Icons';
 

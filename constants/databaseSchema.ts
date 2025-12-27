@@ -1,15 +1,29 @@
 
 export const DATABASE_SCHEMA_SQL = `-- SCRIPT DE CRIAÇÃO DO BANCO DE DADOS - GESTÃO DE CURSOS
--- Compatível com PostgreSQL / Supabase
+-- Execute este script no SQL Editor do seu projeto Supabase.
 
--- 1. TIPOS ENUMERADOS (DEFINIÇÕES DE REGRAS)
-CREATE TYPE user_role AS ENUM ('ADMIN', 'OPERATOR');
-CREATE TYPE student_status AS ENUM ('CURSANDO', 'APROVADO', 'REPROVADO', 'DESISTENTE');
-CREATE TYPE course_period AS ENUM ('Manhã', 'Tarde', 'Noite');
-CREATE TYPE course_status AS ENUM ('Ativo', 'Inativo', 'Concluído');
+-- 1. CRIAÇÃO DE TIPOS (ENUMS) - PROTEÇÃO CONTRA DUPLICIDADE
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE user_role AS ENUM ('ADMIN', 'OPERATOR');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'student_status') THEN
+        CREATE TYPE student_status AS ENUM ('CURSANDO', 'APROVADO', 'REPROVADO', 'DESISTENTE');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'course_period') THEN
+        CREATE TYPE course_period AS ENUM ('Manhã', 'Tarde', 'Noite');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'course_status') THEN
+        CREATE TYPE course_status AS ENUM ('Ativo', 'Inativo', 'Concluído');
+    END IF;
+END$$;
 
--- 2. TABELA DE PARCEIROS (PATROCINADORES)
-CREATE TABLE partners (
+-- 2. TABELA DE PARCEIROS
+CREATE TABLE IF NOT EXISTS partners (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_name TEXT NOT NULL,
     responsible TEXT NOT NULL,
@@ -19,7 +33,7 @@ CREATE TABLE partners (
 );
 
 -- 3. TABELA DE PROFESSORES
-CREATE TABLE teachers (
+CREATE TABLE IF NOT EXISTS teachers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
@@ -29,7 +43,7 @@ CREATE TABLE teachers (
 );
 
 -- 4. TABELA DE CURSOS
-CREATE TABLE courses (
+CREATE TABLE IF NOT EXISTS courses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     workload INTEGER NOT NULL,
@@ -45,14 +59,14 @@ CREATE TABLE courses (
 );
 
 -- 5. RELAÇÃO CURSO x PROFESSOR (Muitos para Muitos)
-CREATE TABLE course_teachers (
+CREATE TABLE IF NOT EXISTS course_teachers (
     course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
     teacher_id UUID REFERENCES teachers(id) ON DELETE CASCADE,
     PRIMARY KEY (course_id, teacher_id)
 );
 
 -- 6. TABELA DE ALUNOS
-CREATE TABLE students (
+CREATE TABLE IF NOT EXISTS students (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     cpf TEXT UNIQUE NOT NULL,
@@ -66,7 +80,7 @@ CREATE TABLE students (
 );
 
 -- 7. TABELA DE USUÁRIOS DO SISTEMA
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     username TEXT UNIQUE NOT NULL,
@@ -77,14 +91,14 @@ CREATE TABLE users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 8. CARGA INICIAL DE USUÁRIOS (ADMINS PADRÃO)
+-- 8. ÍNDICES DE PERFORMANCE
+CREATE INDEX IF NOT EXISTS idx_students_cpf ON students(cpf);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_courses_status ON courses(status);
+
+-- 9. DADOS INICIAIS (ADMINISTRADORES)
 INSERT INTO users (name, username, password, role) 
 VALUES 
 ('Claudio A. Sousa', 'claudioasousa', 'cas661010', 'ADMIN'),
 ('Administrador', 'admin', 'admin', 'ADMIN')
-ON CONFLICT (username) DO NOTHING;
-
--- COMENTÁRIOS DE REGRAS DE NEGÓCIO:
--- - Um aluno só pode ser matriculado em cursos de turnos diferentes.
--- - Status online é atualizado no login/logout da aplicação.
-`;
+ON CONFLICT (username) DO NOTHING;`;

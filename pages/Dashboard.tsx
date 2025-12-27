@@ -3,7 +3,8 @@ import React, { useMemo, useState } from 'react';
 import { useData } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 import { UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, PlusIcon, ClipboardListIcon } from '../components/Icons';
-import { NavLink } from 'react-router-dom';
+// Fix: Import from react-router to resolve missing member error in some environments
+import { NavLink } from 'react-router';
 import { DATABASE_SCHEMA_SQL } from '../constants/databaseSchema';
 import Modal from '../components/Modal';
 
@@ -58,6 +59,7 @@ const Dashboard = () => {
     }, [students]);
 
     const handleCopySQL = () => {
+        // Copia apenas a string SQL, sem o código TypeScript
         navigator.clipboard.writeText(DATABASE_SCHEMA_SQL);
         setCopySuccess(true);
         setTimeout(() => setCopySuccess(false), 2000);
@@ -148,18 +150,21 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            <Modal isOpen={isSchemaModalOpen} onClose={() => setIsSchemaModalOpen(false)} title="Schema SQL Gerado">
+            <Modal isOpen={isSchemaModalOpen} onClose={() => setIsSchemaModalOpen(false)} title="Script SQL Purificado">
                 <div className="space-y-4">
-                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-relaxed">
-                        Execute este script no console SQL do Supabase para criar as tabelas necessárias.
-                    </p>
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-r-2xl">
+                        <p className="text-[11px] text-blue-700 dark:text-blue-300 font-bold leading-relaxed">
+                            Atenção: Copie apenas o texto abaixo. Não inclua o nome da variável TypeScript. 
+                            Passe este conteúdo no SQL Editor do Supabase.
+                        </p>
+                    </div>
                     <div className="relative">
-                        <pre className="bg-gray-900 text-blue-400 p-6 rounded-2xl text-[10px] font-mono overflow-x-auto max-h-[400px] custom-scrollbar border border-gray-800">
+                        <pre className="bg-gray-900 text-emerald-400 p-6 rounded-2xl text-[10px] font-mono overflow-x-auto max-h-[400px] custom-scrollbar border border-gray-800">
                             {DATABASE_SCHEMA_SQL}
                         </pre>
                         <button 
                             onClick={handleCopySQL}
-                            className={`absolute top-4 right-4 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copySuccess ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                            className={`absolute top-4 right-4 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${copySuccess ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                         >
                             {copySuccess ? 'Copiado!' : 'Copiar SQL'}
                         </button>

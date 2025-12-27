@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+// Fix: Import from react-router to resolve missing member error in some environments
+import { Routes, Route, Navigate } from 'react-router';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import StudentsPage from './pages/StudentsPage';

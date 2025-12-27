@@ -2,7 +2,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { HashRouter } from 'react-router-dom';
+// Fix: Import from react-router to resolve missing member error in some environments
+import { HashRouter } from 'react-router';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

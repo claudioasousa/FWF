@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+// Fix: Import from react-router to resolve missing member error in some environments
+import { useNavigate } from 'react-router';
 import Modal from '../components/Modal';
 import UserForm from '../components/forms/UserForm';
 import ConfirmationDialog from '../components/ConfirmationDialog';

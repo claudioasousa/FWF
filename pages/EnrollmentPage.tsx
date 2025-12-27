@@ -2,7 +2,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+// Fix: Import from react-router to resolve missing member error in some environments
+import { useNavigate } from 'react-router';
 import type { Student, Course } from '../types';
 
 const EnrollmentPage = () => {
