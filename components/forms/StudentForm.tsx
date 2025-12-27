@@ -11,7 +11,7 @@ interface StudentFormProps {
 }
 
 const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
-  const { addStudent, updateStudent, courses, students } = useData();
+  const { addStudent, updateStudent, courses, students, isOffline } = useData();
   const { isAdmin } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -141,6 +141,14 @@ const StudentForm = ({ student, onSave, onCancel }: StudentFormProps) => {
           <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-3 mb-4">
             <p className="text-xs font-bold text-red-600 dark:text-red-400">{error}</p>
           </div>
+        )}
+
+        {isOffline && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-3 mb-4">
+              <p className="text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">
+                Modo Offline: Os dados serão sincronizados quando a internet voltar.
+              </p>
+            </div>
         )}
 
         {isReadOnly && (

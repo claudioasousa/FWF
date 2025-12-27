@@ -1,11 +1,19 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Student, Teacher, Course, Partner, User } from '../types';
 
 interface TableStatus {
   name: string;
   ok: boolean;
+}
+
+interface OutboxItem {
+  id: string;
+  table: string;
+  action: 'INSERT' | 'UPDATE' | 'DELETE';
+  payload: any;
+  timestamp: number;
 }
 
 interface DataContextType {
@@ -15,6 +23,8 @@ interface DataContextType {
   partners: Partner[];
   users: User[];
   loading: boolean;
+  isOffline: boolean;
+  pendingSyncCount: number;
   tableStatuses: TableStatus[];
   refreshData: () => Promise<void>;
   addStudent: (student: Omit<Student, 'id'>) => Promise<void>;
@@ -36,6 +46,9 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+const CACHE_KEY = 'gc_data_cache_v1';
+const OUTBOX_KEY = 'gc_outbox_queue_v1';
+
 export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -43,78 +56,159 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [outbox, setOutbox] = useState<OutboxItem[]>(() => {
+    const saved = localStorage.getItem(OUTBOX_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [tableStatuses, setTableStatuses] = useState<TableStatus[]>([]);
 
+  // Carregar Cache Inicial
+  useEffect(() => {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        const data = JSON.parse(cached);
+        setStudents(data.students || []);
+        setTeachers(data.teachers || []);
+        setCourses(data.courses || []);
+        setPartners(data.partners || []);
+        setUsers(data.users || []);
+      } catch (e) {
+        console.error("Erro ao ler cache local", e);
+      }
+    }
+  }, []);
+
+  // Monitor de Conectividade
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      processOutbox();
+    };
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [outbox]);
+
+  const saveToCache = (data: any) => {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+  };
+
+  const addToOutbox = (item: Omit<OutboxItem, 'id' | 'timestamp'>) => {
+    const newItem: OutboxItem = {
+      ...item,
+      id: Math.random().toString(36).substr(2, 9),
+      timestamp: Date.now()
+    };
+    const newOutbox = [...outbox, newItem];
+    setOutbox(newOutbox);
+    localStorage.setItem(OUTBOX_KEY, JSON.stringify(newOutbox));
+  };
+
+  const processOutbox = useCallback(async () => {
+    if (outbox.length === 0 || !navigator.onLine) return;
+
+    console.log(`Sincronizando ${outbox.length} itens pendentes...`);
+    const remainingOutbox = [...outbox];
+    
+    for (const item of outbox) {
+      try {
+        let error = null;
+        if (item.action === 'INSERT') {
+          const { error: err } = await supabase.from(item.table).insert([item.payload]);
+          error = err;
+        } else if (item.action === 'UPDATE') {
+          const { error: err } = await supabase.from(item.table).update(item.payload).eq('id', item.payload.id);
+          error = err;
+        } else if (item.action === 'DELETE') {
+          const { error: err } = await supabase.from(item.table).delete().eq('id', item.payload.id);
+          error = err;
+        }
+
+        // Se não houver erro ou se for um erro de "não encontrado" (que indica que já foi resolvido), removemos da fila
+        if (!error || error.code === 'PGRST116') {
+          const index = remainingOutbox.findIndex(i => i.id === item.id);
+          if (index > -1) remainingOutbox.splice(index, 1);
+        } else {
+          console.error(`Falha ao sincronizar item ${item.id}:`, error);
+        }
+      } catch (e) {
+        console.error("Erro de rede durante processamento do outbox", e);
+        break; 
+      }
+    }
+
+    setOutbox(remainingOutbox);
+    localStorage.setItem(OUTBOX_KEY, JSON.stringify(remainingOutbox));
+    await refreshData();
+  }, [outbox]);
+
   const refreshData = async () => {
-    if (!supabase) return;
+    if (!navigator.onLine) {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
-    const statuses: TableStatus[] = [];
-
     try {
-      // Fetch Partners
-      const { data: pData, error: pErr } = await supabase.from('partners').select('*');
-      if (pData) setPartners(pData.map(p => ({
-        id: p.id,
-        companyName: p.company_name,
-        responsible: p.responsible,
-        contact: p.contact,
-        address: p.address
-      })));
-      statuses.push({ name: 'Parceiros', ok: !pErr });
+      const [pRes, tRes, cRes, sRes, uRes] = await Promise.all([
+        supabase.from('partners').select('*'),
+        supabase.from('teachers').select('*'),
+        supabase.from('courses').select('*'),
+        supabase.from('students').select('*'),
+        supabase.from('users').select('*').order('is_online', { ascending: false })
+      ]);
 
-      // Fetch Teachers
-      const { data: tData, error: tErr } = await supabase.from('teachers').select('*');
-      if (tData) setTeachers(tData);
-      statuses.push({ name: 'Professores', ok: !tErr });
+      const mappedPartners = pRes.data?.map(p => ({
+        id: p.id, companyName: p.company_name, responsible: p.responsible, contact: p.contact, address: p.address
+      })) || partners;
 
-      // Fetch Courses
-      const { data: cData, error: cErr } = await supabase.from('courses').select('*');
-      if (cData) setCourses(cData.map(c => ({
-        id: c.id,
-        name: c.name,
-        workload: c.workload,
-        startDate: c.start_date,
-        endDate: c.end_date,
-        startTime: c.start_time,
-        endTime: c.end_time,
-        period: c.period,
-        location: c.location,
-        partnerId: c.partner_id,
-        status: c.status,
-        teacherIds: []
-      })));
-      statuses.push({ name: 'Cursos', ok: !cErr });
+      const mappedCourses = cRes.data?.map(c => ({
+        id: c.id, name: c.name, workload: c.workload, startDate: c.start_date, endDate: c.end_date,
+        startTime: c.start_time, endTime: c.end_time, period: c.period, location: c.location,
+        partnerId: c.partner_id, status: c.status, teacherIds: []
+      })) || courses;
 
-      // Fetch Students
-      const { data: sData, error: sErr } = await supabase.from('students').select('*');
-      if (sData) setStudents(sData.map(s => ({
-        id: s.id,
-        name: s.name,
-        cpf: s.cpf,
-        contact: s.contact,
-        birthDate: s.birth_date,
-        address: s.address,
-        courseId: s.course_id,
-        status: s.status,
-        class: s.class
-      })));
-      statuses.push({ name: 'Alunos', ok: !sErr });
+      const mappedStudents = sRes.data?.map(s => ({
+        id: s.id, name: s.name, cpf: s.cpf, contact: s.contact, birthDate: s.birth_date,
+        address: s.address, courseId: s.course_id, status: s.status, class: s.class
+      })) || students;
 
-      // Fetch Users
-      const { data: uData, error: uErr } = await supabase.from('users').select('*').order('is_online', { ascending: false });
-      if (uData) setUsers(uData.map(u => ({
-        id: u.id,
-        name: u.name,
-        username: u.username,
-        role: u.role,
-        isOnline: u.is_online,
-        lastSeen: u.last_seen
-      })));
-      statuses.push({ name: 'Usuários', ok: !uErr });
+      const mappedUsers = uRes.data?.map(u => ({
+        id: u.id, name: u.name, username: u.username, role: u.role, isOnline: u.is_online, lastSeen: u.last_seen
+      })) || users;
 
-      setTableStatuses(statuses);
+      const mappedTeachers = tRes.data || teachers;
+
+      setPartners(mappedPartners);
+      setTeachers(mappedTeachers);
+      setCourses(mappedCourses);
+      setStudents(mappedStudents);
+      setUsers(mappedUsers);
+
+      setTableStatuses([
+        { name: 'Parceiros', ok: !pRes.error },
+        { name: 'Professores', ok: !tRes.error },
+        { name: 'Cursos', ok: !cRes.error },
+        { name: 'Alunos', ok: !sRes.error },
+        { name: 'Usuários', ok: !uRes.error },
+      ]);
+
+      saveToCache({ 
+        students: mappedStudents, 
+        teachers: mappedTeachers, 
+        courses: mappedCourses, 
+        partners: mappedPartners, 
+        users: mappedUsers 
+      });
     } catch (err) {
-      console.error('Erro ao sincronizar com Supabase:', err);
+      console.error('Erro na sincronização ativa:', err);
     } finally {
       setLoading(false);
     }
@@ -124,114 +218,101 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     refreshData();
   }, []);
 
-  // CRUD Operations
-  const addStudent = async (d: Omit<Student, 'id'>) => {
-    await supabase.from('students').insert([{
-      name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate,
-      address: d.address, course_id: d.courseId || null, status: d.status, class: d.class
-    }]);
-    await refreshData();
+  // CRUD GERAL COM OUTBOX
+  const handleAction = async (table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', payload: any, updateLocalState: () => void) => {
+    updateLocalState(); // UI Otimista
+    
+    if (navigator.onLine) {
+      try {
+        let error;
+        if (action === 'INSERT') {
+          const { error: err } = await supabase.from(table).insert([payload]);
+          error = err;
+        } else if (action === 'UPDATE') {
+          const { error: err } = await supabase.from(table).update(payload).eq('id', payload.id);
+          error = err;
+        } else if (action === 'DELETE') {
+          const { error: err } = await supabase.from(table).delete().eq('id', payload.id);
+          error = err;
+        }
+        
+        if (error) throw error;
+        await refreshData();
+      } catch (e) {
+        console.warn(`Erro ao salvar online em ${table}, movendo para Outbox...`);
+        addToOutbox({ table, action, payload });
+      }
+    } else {
+      addToOutbox({ table, action, payload });
+    }
   };
 
-  const updateStudent = async (d: Student) => {
-    await supabase.from('students').update({
-      name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate,
-      address: d.address, course_id: d.courseId || null, status: d.status, class: d.class
-    }).eq('id', d.id);
-    await refreshData();
+  // Funções específicas (Wrapper do handleAction)
+  const addStudent = (d: Omit<Student, 'id'>) => {
+    const tempId = Math.random().toString(36).substr(2, 9);
+    const payload = { name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: d.courseId || null, status: d.status, class: d.class };
+    return handleAction('students', 'INSERT', payload, () => setStudents(p => [...p, { ...d, id: tempId } as Student]));
   };
 
-  const removeStudent = async (id: string) => {
-    await supabase.from('students').delete().eq('id', id);
-    await refreshData();
+  const updateStudent = (d: Student) => {
+    const payload = { id: d.id, name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: d.courseId || null, status: d.status, class: d.class };
+    return handleAction('students', 'UPDATE', payload, () => setStudents(p => p.map(s => s.id === d.id ? d : s)));
   };
 
-  const addCourse = async (d: Omit<Course, 'id'>) => {
-    await supabase.from('courses').insert([{
-      name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate,
-      start_time: d.startTime, end_time: d.endTime, period: d.period,
-      location: d.location, partner_id: d.partnerId || null, status: d.status
-    }]);
-    await refreshData();
+  const removeStudent = (id: string) => {
+    return handleAction('students', 'DELETE', { id }, () => setStudents(p => p.filter(s => s.id !== id)));
   };
 
-  const updateCourse = async (d: Course) => {
-    await supabase.from('courses').update({
-      name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate,
-      start_time: d.startTime, end_time: d.endTime, period: d.period,
-      location: d.location, partner_id: d.partnerId || null, status: d.status
-    }).eq('id', d.id);
-    await refreshData();
+  const addCourse = (d: Omit<Course, 'id'>) => {
+    const tempId = Math.random().toString(36).substr(2, 9);
+    const payload = { name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: d.partnerId || null, status: d.status };
+    return handleAction('courses', 'INSERT', payload, () => setCourses(p => [...p, { ...d, id: tempId } as Course]));
   };
 
-  const removeCourse = async (id: string) => {
-    await supabase.from('courses').delete().eq('id', id);
-    await refreshData();
+  const updateCourse = (d: Course) => {
+    const payload = { id: d.id, name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: d.partnerId || null, status: d.status };
+    return handleAction('courses', 'UPDATE', payload, () => setCourses(p => p.map(c => c.id === d.id ? d : c)));
   };
 
-  const addTeacher = async (d: Omit<Teacher, 'id'>) => {
-    await supabase.from('teachers').insert([d]);
-    await refreshData();
+  const removeCourse = (id: string) => {
+    return handleAction('courses', 'DELETE', { id }, () => setCourses(p => p.filter(c => c.id !== id)));
   };
 
-  const updateTeacher = async (d: Teacher) => {
-    await supabase.from('teachers').update(d).eq('id', d.id);
-    await refreshData();
+  const addTeacher = (d: Omit<Teacher, 'id'>) => {
+    const tempId = Math.random().toString(36).substr(2, 9);
+    return handleAction('teachers', 'INSERT', d, () => setTeachers(p => [...p, { ...d, id: tempId } as Teacher]));
   };
 
-  const removeTeacher = async (id: string) => {
-    await supabase.from('teachers').delete().eq('id', id);
-    await refreshData();
+  const updateTeacher = (d: Teacher) => {
+    return handleAction('teachers', 'UPDATE', d, () => setTeachers(p => p.map(t => t.id === d.id ? d : t)));
   };
 
-  const addPartner = async (d: Omit<Partner, 'id'>) => {
-    await supabase.from('partners').insert([{
-      company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address
-    }]);
-    await refreshData();
+  const removeTeacher = (id: string) => {
+    return handleAction('teachers', 'DELETE', { id }, () => setTeachers(p => p.filter(t => t.id !== id)));
   };
 
-  const updatePartner = async (d: Partner) => {
-    await supabase.from('partners').update({
-      company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address
-    }).eq('id', d.id);
-    await refreshData();
+  const addPartner = (d: Omit<Partner, 'id'>) => {
+    const tempId = Math.random().toString(36).substr(2, 9);
+    const payload = { company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address };
+    return handleAction('partners', 'INSERT', payload, () => setPartners(p => [...p, { ...d, id: tempId } as Partner]));
   };
 
-  const removePartner = async (id: string) => {
-    await supabase.from('partners').delete().eq('id', id);
-    await refreshData();
+  const updatePartner = (d: Partner) => {
+    const payload = { id: d.id, company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address };
+    return handleAction('partners', 'UPDATE', payload, () => setPartners(p => p.map(pt => pt.id === d.id ? d : pt)));
   };
 
-  const addUser = async (d: Omit<User, 'id'>) => {
-    await supabase.from('users').insert([{
-      name: d.name,
-      username: d.username,
-      password: d.password,
-      role: d.role,
-      is_online: false
-    }]);
-    await refreshData();
+  const removePartner = (id: string) => {
+    return handleAction('partners', 'DELETE', { id }, () => setPartners(p => p.filter(pt => pt.id !== id)));
   };
 
-  const updateUser = async (d: User) => {
-    await supabase.from('users').update({
-      name: d.name,
-      username: d.username,
-      password: d.password,
-      role: d.role
-    }).eq('id', d.id);
-    await refreshData();
-  };
-
-  const removeUser = async (id: string) => {
-    await supabase.from('users').delete().eq('id', id);
-    await refreshData();
-  };
+  const addUser = (d: Omit<User, 'id'>) => handleAction('users', 'INSERT', d, () => refreshData());
+  const updateUser = (d: User) => handleAction('users', 'UPDATE', d, () => setUsers(p => p.map(u => u.id === d.id ? d : u)));
+  const removeUser = (id: string) => handleAction('users', 'DELETE', { id }, () => setUsers(p => p.filter(u => u.id !== id)));
 
   return (
     <DataContext.Provider value={{
-      students, teachers, courses, partners, users, loading, tableStatuses, refreshData,
+      students, teachers, courses, partners, users, loading, isOffline, pendingSyncCount: outbox.length, tableStatuses, refreshData,
       addStudent, updateStudent, removeStudent,
       addTeacher, updateTeacher, removeTeacher,
       addCourse, updateCourse, removeCourse,
