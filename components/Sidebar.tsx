@@ -11,7 +11,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const navItems = [
     { to: '/', text: 'Dashboard', icon: <HomeIcon className="h-5 w-5" />, show: true },
@@ -69,7 +69,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         
         <div className="p-6">
           <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-700">
-             <div className="flex items-center gap-3 mb-4">
+             <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-black text-[10px]">
                   {user?.name.charAt(0)}
                 </div>
@@ -78,12 +78,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                   <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{user?.role}</p>
                 </div>
              </div>
-             <button 
-               onClick={logout}
-               className="w-full py-2.5 bg-white dark:bg-gray-800 text-rose-500 font-black text-[10px] uppercase tracking-widest rounded-xl border border-rose-50 dark:border-rose-900/20 hover:bg-rose-50 transition-all active:scale-95"
-             >
-               Sair do Sistema
-             </button>
           </div>
         </div>
       </aside>

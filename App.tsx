@@ -11,23 +11,11 @@ import PartnersPage from './pages/PartnersPage';
 import EnrollmentPage from './pages/EnrollmentPage';
 import ReportsPage from './pages/ReportsPage';
 import UsersPage from './pages/UsersPage';
-import LoginPage from './pages/LoginPage';
 import { DataProvider } from './hooks/useData';
-import { AuthProvider, useAuth } from './hooks/useAuth';
+import { AuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
 
 const AppContent = () => {
-  const { user } = useAuth();
-
-  if (!user) {
-    return (
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
-  }
-
   return (
     <Layout>
       <Routes>
