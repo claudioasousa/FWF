@@ -7,7 +7,7 @@ import { useData } from '../hooks/useData';
 const Layout = ({ children }: React.PropsWithChildren<{}>) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const { isOffline, pendingSyncCount, syncOutbox } = useData();
+  const { isOffline, infraError, pendingSyncCount, syncOutbox } = useData();
 
   useEffect(() => {
     if (isSidebarOpen) {
@@ -32,7 +32,6 @@ const Layout = ({ children }: React.PropsWithChildren<{}>) => {
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-500/10 dark:bg-blue-600/10 rounded-full blur-[120px] animate-blob"></div>
         <div className="absolute bottom-[10%] right-[-5%] w-[40%] h-[40%] bg-indigo-500/10 dark:bg-indigo-600/10 rounded-full blur-[120px] animate-blob animation-delay-2000"></div>
-        <div className="absolute top-[30%] left-[20%] w-[30%] h-[30%] bg-purple-500/10 dark:bg-purple-600/10 rounded-full blur-[120px] animate-blob animation-delay-4000"></div>
       </div>
 
       {/* Networking Toasts */}
@@ -69,8 +68,18 @@ const Layout = ({ children }: React.PropsWithChildren<{}>) => {
 
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
-      <main className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
-        <div className="p-6 sm:p-10 lg:p-16 max-w-[1600px] mx-auto min-h-full">
+      <main className="flex-1 overflow-y-auto custom-scrollbar relative z-10 flex flex-col">
+        {/* Persistent Infra Warning Banner */}
+        {infraError && (
+          <div className="w-full bg-amber-500 dark:bg-amber-600 text-white px-10 py-3 flex items-center justify-center gap-4 animate-fadeIn sticky top-0 z-50">
+            <span className="text-lg">⚠️</span>
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest leading-none">
+              Contingência Ativa: {infraError}
+            </span>
+          </div>
+        )}
+
+        <div className="p-6 sm:p-10 lg:p-16 max-w-[1600px] mx-auto min-h-full w-full">
           {children}
         </div>
       </main>

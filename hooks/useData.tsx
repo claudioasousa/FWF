@@ -27,6 +27,7 @@ interface DataContextType {
   users: User[];
   loading: boolean;
   isOffline: boolean;
+  infraError: string | null;
   pendingSyncCount: number;
   tableStatuses: TableStatus[];
   isConfigValid: boolean;
@@ -55,10 +56,9 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 const CACHE_KEY = 'gc_data_cache_v2';
 const OUTBOX_KEY = 'gc_outbox_queue_v2';
 
-// Função utilitária para verificar se uma string é um UUID válido
 const isUUID = (id: any) => {
   if (typeof id !== 'string') return false;
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 };
 
 const MOCK_DATA = {
@@ -76,6 +76,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [infraError, setInfraError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine || !isConfigured);
   const [outbox, setOutbox] = useState<OutboxItem[]>(() => {
     const saved = localStorage.getItem(OUTBOX_KEY);
@@ -114,25 +115,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     }
   }, []);
 
-  useEffect(() => { loadInitialData(); }, [loadInitialData]);
-
-  const testAllConnections = async () => {
-    if (!isConfigured) {
-      setTableStatuses(prev => prev.map(s => ({ ...s, ok: false, error: 'Config missing' })));
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const tables = ['partners', 'teachers', 'courses', 'students', 'users'];
-    const statuses = await Promise.all(tables.map(async t => {
-      const { error } = await supabase.from(t).select('count', { count: 'exact', head: true });
-      return { name: t, table: t, ok: !error, error: error?.message, testedAt: new Date().toLocaleTimeString() };
-    }));
-    setTableStatuses(statuses as any);
-    setLoading(false);
-    if (statuses.every(s => s.ok)) await refreshData();
-  };
-
   const refreshData = async () => {
     if (!isConfigured) return;
     setLoading(true);
@@ -159,27 +141,63 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
       saveToCache({ students: newStudents, teachers: newTeachers, courses: newCourses, partners: newPartners, users: newUsers });
       setIsOffline(false);
-    } catch (err) { setIsOffline(true); } finally { setLoading(false); }
+      setInfraError(null);
+    } catch (err) { 
+      setIsOffline(true);
+    } finally { setLoading(false); }
+  };
+
+  const testAllConnections = async () => {
+    if (!isConfigured) {
+      setTableStatuses(prev => prev.map(s => ({ ...s, ok: false, error: 'Configuração ausente' })));
+      setInfraError("O sistema não possui chaves de API configuradas. Operando em modo de simulação local.");
+      setIsOffline(true);
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
+    const tables = ['partners', 'teachers', 'courses', 'students', 'users'];
+    try {
+        const statuses = await Promise.all(tables.map(async t => {
+          const { error } = await supabase.from(t).select('count', { count: 'exact', head: true });
+          return { name: t, table: t, ok: !error, error: error?.message, testedAt: new Date().toLocaleTimeString() };
+        }));
+        setTableStatuses(statuses as any);
+        
+        const allOk = statuses.every(s => s.ok);
+        if (allOk) {
+            await refreshData();
+            setIsOffline(false);
+            setInfraError(null);
+        } else {
+            const firstError = statuses.find(s => !s.ok)?.error || 'Erro desconhecido na infraestrutura cloud.';
+            setInfraError(`Falha na conexão com o banco de dados: ${firstError}`);
+            setIsOffline(true);
+        }
+    } catch (e: any) {
+        setIsOffline(true);
+        setInfraError(`Erro de rede crítico: ${e.message || 'Não foi possível contatar o servidor.'}`);
+    } finally {
+        setLoading(false);
+    }
   };
 
   const syncOutbox = async () => {
     if (!navigator.onLine || !isConfigured || outbox.length === 0) return;
+    
     const items = [...outbox];
     const failed = [];
     
     for (const item of items) {
       try {
         let res;
-        // Se for UPDATE ou DELETE e o ID não for um UUID válido, 
-        // significa que o registro ainda não existe no Supabase. 
-        // Devemos pular e deixar o INSERT original rodar primeiro.
         if ((item.action === 'UPDATE' || item.action === 'DELETE') && !isUUID(item.payload.id)) {
             failed.push(item);
             continue;
         }
 
         if (item.action === 'INSERT') {
-          // Remove ID temporário antes de enviar para o Supabase gerar um UUID real
           const { id: tempId, ...cleanPayload } = item.payload;
           res = await supabase.from(item.table).insert([cleanPayload]);
         } 
@@ -193,18 +211,42 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         
         if (res?.error) throw res.error;
       } catch (e) {
-        console.error("Erro na sincronização do item:", item, e);
         failed.push(item);
       }
     }
     
     setOutbox(failed);
     localStorage.setItem(OUTBOX_KEY, JSON.stringify(failed));
-    if (failed.length < items.length) await refreshData();
+    
+    if (failed.length === 0 || failed.length < items.length) {
+        await refreshData();
+    }
   };
 
+  useEffect(() => {
+    loadInitialData();
+    testAllConnections();
+
+    const handleOnline = () => {
+      testAllConnections();
+      syncOutbox();
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+      setInfraError("Sua conexão de internet caiu. O sistema está em modo offline.");
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const handleAction = async (table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', payload: any, updateLocalState: () => void) => {
-    // Se estivermos tentando editar ou deletar algo sem UUID, tratamos apenas como ação de Outbox
     const needsUuid = action === 'UPDATE' || action === 'DELETE';
     const hasValidUuid = payload.id && isUUID(payload.id);
 
@@ -227,11 +269,10 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         await refreshData();
         return;
       } catch (e) {
-        console.warn("Falha ao enviar, movendo para Outbox:", e);
+        // Fallback para outbox em caso de erro momentâneo
       }
     }
 
-    // Se falhar ou estiver offline/sem UUID, vai para o Outbox
     const newItem = { 
         id: Math.random().toString(36).substr(2, 9), 
         table, 
@@ -246,7 +287,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
       return up;
     });
 
-    // Atualização otimista do estado local (mesmo offline)
     updateLocalState();
   };
 
@@ -272,7 +312,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   return (
     <DataContext.Provider value={{
-      students, teachers, courses, partners, users, loading, isOffline, pendingSyncCount: outbox.length, tableStatuses, isConfigValid: isConfigured, refreshData, testAllConnections, syncOutbox,
+      students, teachers, courses, partners, users, loading, isOffline, infraError, pendingSyncCount: outbox.length, tableStatuses, isConfigValid: isConfigured, refreshData, testAllConnections, syncOutbox,
       addStudent, updateStudent, removeStudent, addTeacher, updateTeacher, removeTeacher, addCourse, updateCourse, removeCourse, addPartner, updatePartner, removePartner, addUser, updateUser, removeUser
     }}>
       {children}
