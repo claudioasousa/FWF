@@ -6,7 +6,8 @@ import { useData } from '../hooks/useData';
 
 const Layout = ({ children }: React.PropsWithChildren<{}>) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { isOffline, pendingSyncCount } = useData();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const { isOffline, pendingSyncCount, syncOutbox } = useData();
 
   useEffect(() => {
     if (isSidebarOpen) {
@@ -16,6 +17,13 @@ const Layout = ({ children }: React.PropsWithChildren<{}>) => {
     }
     return () => { document.body.style.overflow = ''; };
   }, [isSidebarOpen]);
+
+  const handleManualSync = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    await syncOutbox();
+    setIsSyncing(false);
+  };
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans selection:bg-blue-500/30">
@@ -37,10 +45,16 @@ const Layout = ({ children }: React.PropsWithChildren<{}>) => {
         )}
         
         {pendingSyncCount > 0 && (
-            <div className="flex items-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-2xl shadow-2xl border border-white/20 backdrop-blur-md">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                <span className="text-[11px] font-black uppercase tracking-[0.2em]">{pendingSyncCount} Pending Syncs</span>
-            </div>
+            <button 
+                onClick={handleManualSync}
+                className={`flex items-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-2xl shadow-2xl border border-white/20 backdrop-blur-md pointer-events-auto active:scale-95 transition-all group ${isSyncing ? 'opacity-70 cursor-wait' : 'cursor-pointer'}`}
+            >
+                <div className={`w-2 h-2 bg-white rounded-full ${isSyncing ? 'animate-spin' : 'animate-pulse'}`}></div>
+                <span className="text-[11px] font-black uppercase tracking-[0.2em]">
+                    {isSyncing ? 'Sincronizando...' : `${pendingSyncCount} Ações Pendentes`}
+                </span>
+                {!isSyncing && <span className="text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity ml-2">Sincronizar Agora</span>}
+            </button>
         )}
       </div>
 

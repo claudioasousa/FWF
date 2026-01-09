@@ -32,6 +32,7 @@ interface DataContextType {
   isConfigValid: boolean;
   refreshData: () => Promise<void>;
   testAllConnections: () => Promise<void>;
+  syncOutbox: () => Promise<void>;
   addStudent: (student: Omit<Student, 'id'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;
   removeStudent: (id: string) => Promise<void>;
@@ -54,23 +55,14 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 const CACHE_KEY = 'gc_data_cache_v2';
 const OUTBOX_KEY = 'gc_outbox_queue_v2';
 
-// Função utilitária para verificar se um ID é um UUID válido
 const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 const MOCK_DATA = {
-  partners: [
-    { id: 'p1', companyName: 'Parceiro Exemplo Local', responsible: 'Admin', contact: '0000000', address: 'Local' }
-  ],
-  teachers: [
-    { id: 't1', name: 'Professor Exemplo Local', email: 'prof@local.com', contact: '0000000', specialization: 'Geral' }
-  ],
-  courses: [
-    { id: 'c1', name: 'Curso Exemplo Local', workload: 40, startDate: '2024-01-01', endDate: '2024-12-31', startTime: '08:00', endTime: '12:00', period: 'Manhã', location: 'Local', status: 'Ativo', partnerId: 'p1', teacherIds: [] }
-  ],
+  partners: [{ id: 'p1', companyName: 'Parceiro Exemplo Local', responsible: 'Admin', contact: '0000000', address: 'Local' }],
+  teachers: [{ id: 't1', name: 'Professor Exemplo Local', email: 'prof@local.com', contact: '0000000', specialization: 'Geral' }],
+  courses: [{ id: 'c1', name: 'Curso Exemplo Local', workload: 40, startDate: '2024-01-01', endDate: '2024-12-31', startTime: '08:00', endTime: '12:00', period: 'Manhã', location: 'Local', status: 'Ativo', partnerId: 'p1', teacherIds: [] }],
   students: [],
-  users: [
-    { id: 'u1', name: 'Admin Local', username: 'admin', role: 'ADMIN', isOnline: true }
-  ]
+  users: [{ id: 'u1', name: 'Admin Local', username: 'admin', role: 'ADMIN', isOnline: true }]
 };
 
 export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
@@ -108,9 +100,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         setCourses(data.courses || []);
         setPartners(data.partners || []);
         setUsers(data.users || []);
-      } catch (e) {
-        console.error("Erro ao ler cache");
-      }
+      } catch (e) { console.error("Cache corrupto"); }
     } else {
       setStudents(MOCK_DATA.students as any);
       setTeachers(MOCK_DATA.teachers as any);
@@ -120,274 +110,113 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     }
   }, []);
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  useEffect(() => { loadInitialData(); }, [loadInitialData]);
 
   const testAllConnections = async () => {
     if (!isConfigured) {
-      setTableStatuses(prev => prev.map(s => ({ ...s, ok: false, error: 'Banco não configurado', testedAt: new Date().toLocaleTimeString() })));
+      setTableStatuses(prev => prev.map(s => ({ ...s, ok: false, error: 'Config missing' })));
       setLoading(false);
       return;
     }
-
     setLoading(true);
-    const newStatuses: TableStatus[] = [];
-    const tables = [
-      { name: 'Parceiros', table: 'partners' },
-      { name: 'Professores', table: 'teachers' },
-      { name: 'Cursos', table: 'courses' },
-      { name: 'Alunos', table: 'students' },
-      { name: 'Usuários', table: 'users' },
-    ];
-
-    for (const t of tables) {
-      try {
-        const { error } = await supabase.from(t.table).select('count', { count: 'exact', head: true });
-        newStatuses.push({
-          ...t,
-          ok: !error,
-          error: error ? `${error.code}: ${error.message}` : undefined,
-          testedAt: new Date().toLocaleTimeString()
-        });
-      } catch (e) {
-        newStatuses.push({
-          ...t,
-          ok: false,
-          error: 'Erro de Rede',
-          testedAt: new Date().toLocaleTimeString()
-        });
-      }
-    }
-
-    setTableStatuses(newStatuses);
+    const tables = ['partners', 'teachers', 'courses', 'students', 'users'];
+    const statuses = await Promise.all(tables.map(async t => {
+      const { error } = await supabase.from(t).select('count', { count: 'exact', head: true });
+      return { name: t, table: t, ok: !error, error: error?.message, testedAt: new Date().toLocaleTimeString() };
+    }));
+    setTableStatuses(statuses as any);
     setLoading(false);
-    if (newStatuses.every(s => s.ok)) await refreshData();
+    if (statuses.every(s => s.ok)) await refreshData();
   };
 
   const refreshData = async () => {
-    if (!isConfigured) {
-      setLoading(false);
-      setIsOffline(true);
-      return;
-    }
-    
+    if (!isConfigured) return;
     setLoading(true);
     try {
-      const results = await Promise.allSettled([
+      const [p, t, c, s, u] = await Promise.all([
         supabase.from('partners').select('*'),
         supabase.from('teachers').select('*'),
         supabase.from('courses').select('*'),
         supabase.from('students').select('*'),
         supabase.from('users').select('*').order('is_online', { ascending: false })
       ]);
-
-      if (results[0].status === 'fulfilled' && results[0].value.data) {
-        setPartners(results[0].value.data.map(p => ({
-          id: p.id, companyName: p.company_name, responsible: p.responsible, contact: p.contact, address: p.address
-        })));
-      }
-      if (results[1].status === 'fulfilled' && results[1].value.data) {
-        setTeachers(results[1].value.data);
-      }
-      if (results[2].status === 'fulfilled' && results[2].value.data) {
-        setCourses(results[2].value.data.map(c => ({
-          id: c.id, name: c.name, workload: c.workload, startDate: c.start_date, endDate: c.end_date,
-          startTime: c.start_time, endTime: c.end_time, period: c.period, location: c.location,
-          partnerId: c.partner_id, status: c.status, teacherIds: []
-        })));
-      }
-      if (results[3].status === 'fulfilled' && results[3].value.data) {
-        setStudents(results[3].value.data.map(s => ({
-          id: s.id, name: s.name, cpf: s.cpf, contact: s.contact, birthDate: s.birth_date,
-          address: s.address, courseId: s.course_id, status: s.status, class: s.class
-        })));
-      }
-      if (results[4].status === 'fulfilled' && results[4].value.data) {
-        setUsers(results[4].value.data.map(u => ({
-          id: u.id, name: u.name, username: u.username, role: u.role, isOnline: u.is_online, lastSeen: u.last_seen
-        })));
-      }
-
-      saveToCache({ students, teachers, courses, partners, users });
+      if (p.data) setPartners(p.data.map(i => ({ id: i.id, companyName: i.company_name, responsible: i.responsible, contact: i.contact, address: i.address })));
+      if (t.data) setTeachers(t.data);
+      if (c.data) setCourses(c.data.map(i => ({ id: i.id, name: i.name, workload: i.workload, startDate: i.start_date, endDate: i.end_date, startTime: i.start_time, endTime: i.end_time, period: i.period, location: i.location, partnerId: i.partner_id, status: i.status, teacherIds: [] })));
+      if (s.data) setStudents(s.data.map(i => ({ id: i.id, name: i.name, cpf: i.cpf, contact: i.contact, birthDate: i.birth_date, address: i.address, courseId: i.course_id, status: i.status, class: i.class })));
+      if (u.data) setUsers(u.data.map(i => ({ id: i.id, name: i.name, username: i.username, role: i.role, isOnline: i.is_online, lastSeen: i.last_seen })));
       setIsOffline(false);
-    } catch (err) {
-      setIsOffline(true);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setIsOffline(true); } finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    if (isConfigured) {
-      testAllConnections();
-    } else {
-      setLoading(false);
+  const syncOutbox = async () => {
+    if (!navigator.onLine || !isConfigured || outbox.length === 0) return;
+    const items = [...outbox];
+    const failed = [];
+    for (const item of items) {
+      try {
+        let res;
+        if (item.action === 'INSERT') res = await supabase.from(item.table).insert([item.payload]);
+        else if (item.action === 'UPDATE') {
+          const { id, ...rest } = item.payload;
+          res = await supabase.from(item.table).update(rest).eq('id', id);
+        }
+        else if (item.action === 'DELETE') res = await supabase.from(item.table).delete().eq('id', item.payload.id);
+        
+        if (res?.error) throw res.error;
+      } catch (e) {
+        failed.push(item);
+      }
     }
-  }, [isConfigured]);
+    setOutbox(failed);
+    localStorage.setItem(OUTBOX_KEY, JSON.stringify(failed));
+    if (failed.length < items.length) refreshData();
+  };
 
   const handleAction = async (table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', payload: any, updateLocalState: () => void) => {
     updateLocalState();
-    setTimeout(() => saveToCache({ students, teachers, courses, partners, users }), 100);
-
     if (navigator.onLine && isConfigured) {
-      // Se for UPDATE ou DELETE, verificamos se o ID é um UUID antes de tentar no Supabase
-      if ((action === 'UPDATE' || action === 'DELETE') && payload.id && !isUUID(payload.id)) {
-        console.warn("Ignorando chamada API para ID local:", payload.id);
-        return; 
-      }
-
+      if ((action === 'UPDATE' || action === 'DELETE') && payload.id && !isUUID(payload.id)) return;
       try {
-        let error;
-        if (action === 'INSERT') {
-          const { error: err } = await supabase.from(table).insert([payload]);
-          error = err;
-        } else if (action === 'UPDATE') {
-          const { id, ...dataToUpdate } = payload;
-          const { error: err } = await supabase.from(table).update(dataToUpdate).eq('id', id);
-          error = err;
-        } else if (action === 'DELETE') {
-          const { error: err } = await supabase.from(table).delete().eq('id', payload.id);
-          error = err;
+        let res;
+        if (action === 'INSERT') res = await supabase.from(table).insert([payload]);
+        else if (action === 'UPDATE') {
+          const { id, ...rest } = payload;
+          res = await supabase.from(table).update(rest).eq('id', id);
         }
-        if (error) {
-            console.error(`Erro Supabase (${action} ${table}):`, error);
-            throw error;
-        }
+        else if (action === 'DELETE') res = await supabase.from(table).delete().eq('id', payload.id);
+        if (res?.error) throw res.error;
       } catch (e) {
-        const newItem: OutboxItem = { id: Math.random().toString(36).substr(2, 9), table, action, payload, timestamp: Date.now() };
+        const newItem = { id: Math.random().toString(36).substr(2, 9), table, action, payload, timestamp: Date.now() };
         setOutbox(prev => {
-          const updated = [...prev, newItem];
-          localStorage.setItem(OUTBOX_KEY, JSON.stringify(updated));
-          return updated;
+          const up = [...prev, newItem];
+          localStorage.setItem(OUTBOX_KEY, JSON.stringify(up));
+          return up;
         });
       }
     }
   };
 
-  const addStudent = (d: Omit<Student, 'id'>) => {
-    const tempId = Math.random().toString(36).substr(2, 9);
-    const payload = { 
-        name: d.name, 
-        cpf: d.cpf, 
-        contact: d.contact, 
-        birth_date: d.birthDate, 
-        address: d.address, 
-        course_id: (d.courseId && isUUID(d.courseId)) ? d.courseId : null, 
-        status: d.status, 
-        class: d.class || null 
-    };
-    return handleAction('students', 'INSERT', payload, () => setStudents(p => [...p, { ...d, id: tempId } as Student]));
-  };
-
-  const updateStudent = (d: Student) => {
-    const payload = { 
-        id: d.id, 
-        name: d.name, 
-        cpf: d.cpf, 
-        contact: d.contact, 
-        birth_date: d.birthDate, 
-        address: d.address, 
-        course_id: (d.courseId && isUUID(d.courseId)) ? d.courseId : null, 
-        status: d.status, 
-        class: d.class || null 
-    };
-    return handleAction('students', 'UPDATE', payload, () => setStudents(p => p.map(s => s.id === d.id ? d : s)));
-  };
-
-  const removeStudent = (id: string) => {
-    return handleAction('students', 'DELETE', { id }, () => setStudents(p => p.filter(s => s.id !== id)));
-  };
-
-  const addCourse = (d: Omit<Course, 'id'>) => {
-    const tempId = Math.random().toString(36).substr(2, 9);
-    const payload = { 
-        name: d.name, 
-        workload: d.workload, 
-        start_date: d.startDate, 
-        end_date: d.endDate, 
-        start_time: d.startTime, 
-        end_time: d.endTime, 
-        period: d.period, 
-        location: d.location, 
-        partner_id: (d.partnerId && isUUID(d.partnerId)) ? d.partnerId : null, 
-        status: d.status 
-    };
-    return handleAction('courses', 'INSERT', payload, () => setCourses(p => [...p, { ...d, id: tempId } as Course]));
-  };
-
-  const updateCourse = (d: Course) => {
-    const payload = { 
-        id: d.id, 
-        name: d.name, 
-        workload: d.workload, 
-        start_date: d.startDate, 
-        end_date: d.endDate, 
-        start_time: d.startTime, 
-        end_time: d.endTime, 
-        period: d.period, 
-        location: d.location, 
-        partner_id: (d.partnerId && isUUID(d.partnerId)) ? d.partnerId : null, 
-        status: d.status 
-    };
-    return handleAction('courses', 'UPDATE', payload, () => setCourses(p => p.map(c => c.id === d.id ? d : c)));
-  };
-
-  const removeCourse = (id: string) => {
-    return handleAction('courses', 'DELETE', { id }, () => setCourses(p => p.filter(c => c.id !== id)));
-  };
-
-  const addTeacher = (d: Omit<Teacher, 'id'>) => {
-    const tempId = Math.random().toString(36).substr(2, 9);
-    return handleAction('teachers', 'INSERT', d, () => setTeachers(p => [...p, { ...d, id: tempId } as Teacher]));
-  };
-
-  const updateTeacher = (d: Teacher) => {
-    return handleAction('teachers', 'UPDATE', d, () => setTeachers(p => p.map(t => t.id === d.id ? d : t)));
-  };
-
-  const removeTeacher = (id: string) => {
-    return handleAction('teachers', 'DELETE', { id }, () => setTeachers(p => p.filter(t => t.id !== id)));
-  };
-
-  const addPartner = (d: Omit<Partner, 'id'>) => {
-    const tempId = Math.random().toString(36).substr(2, 9);
-    const payload = { 
-        company_name: d.companyName, 
-        responsible: d.responsible, 
-        contact: d.contact, 
-        address: d.address 
-    };
-    return handleAction('partners', 'INSERT', payload, () => setPartners(p => [...p, { ...d, id: tempId } as Partner]));
-  };
-
-  const updatePartner = (d: Partner) => {
-    const payload = { 
-        id: d.id, 
-        company_name: d.companyName, 
-        responsible: d.responsible, 
-        contact: d.contact, 
-        address: d.address 
-    };
-    return handleAction('partners', 'UPDATE', payload, () => setPartners(p => p.map(pt => pt.id === d.id ? d : pt)));
-  };
-
-  const removePartner = (id: string) => {
-    return handleAction('partners', 'DELETE', { id }, () => setPartners(p => p.filter(pt => pt.id !== id)));
-  };
-
-  const addUser = (d: Omit<User, 'id'>) => handleAction('users', 'INSERT', d, () => refreshData());
-  const updateUser = (d: User) => handleAction('users', 'UPDATE', d, () => setUsers(p => p.map(u => u.id === d.id ? d : u)));
-  const removeUser = (id: string) => handleAction('users', 'DELETE', { id }, () => setUsers(p => p.filter(u => u.id !== id)));
+  const addStudent = (d: any) => handleAction('students', 'INSERT', { name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: isUUID(d.courseId) ? d.courseId : null, status: d.status, class: d.class || null }, () => refreshData());
+  const updateStudent = (d: any) => handleAction('students', 'UPDATE', { id: d.id, name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: isUUID(d.courseId) ? d.courseId : null, status: d.status, class: d.class || null }, () => refreshData());
+  const removeStudent = (id: string) => handleAction('students', 'DELETE', { id }, () => refreshData());
+  const addCourse = (d: any) => handleAction('courses', 'INSERT', { name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: isUUID(d.partnerId) ? d.partnerId : null, status: d.status }, () => refreshData());
+  const updateCourse = (d: any) => handleAction('courses', 'UPDATE', { id: d.id, name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: isUUID(d.partnerId) ? d.partnerId : null, status: d.status }, () => refreshData());
+  const removeCourse = (id: string) => handleAction('courses', 'DELETE', { id }, () => refreshData());
+  const addTeacher = (d: any) => handleAction('teachers', 'INSERT', d, () => refreshData());
+  const updateTeacher = (d: any) => handleAction('teachers', 'UPDATE', d, () => refreshData());
+  const removeTeacher = (id: string) => handleAction('teachers', 'DELETE', { id }, () => refreshData());
+  const addPartner = (d: any) => handleAction('partners', 'INSERT', { company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address }, () => refreshData());
+  const updatePartner = (d: any) => handleAction('partners', 'UPDATE', { id: d.id, company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address }, () => refreshData());
+  const removePartner = (id: string) => handleAction('partners', 'DELETE', { id }, () => refreshData());
+  const addUser = (d: any) => handleAction('users', 'INSERT', d, () => refreshData());
+  const updateUser = (d: any) => handleAction('users', 'UPDATE', d, () => refreshData());
+  const removeUser = (id: string) => handleAction('users', 'DELETE', { id }, () => refreshData());
 
   return (
     <DataContext.Provider value={{
-      students, teachers, courses, partners, users, loading, isOffline, pendingSyncCount: outbox.length, tableStatuses, isConfigValid: isConfigured, refreshData, testAllConnections,
-      addStudent, updateStudent, removeStudent,
-      addTeacher, updateTeacher, removeTeacher,
-      addCourse, updateCourse, removeCourse,
-      addPartner, updatePartner, removePartner,
-      addUser, updateUser, removeUser
+      students, teachers, courses, partners, users, loading, isOffline, pendingSyncCount: outbox.length, tableStatuses, isConfigValid: isConfigured, refreshData, testAllConnections, syncOutbox,
+      addStudent, updateStudent, removeStudent, addTeacher, updateTeacher, removeTeacher, addCourse, updateCourse, removeCourse, addPartner, updatePartner, removePartner, addUser, updateUser, removeUser
     }}>
       {children}
     </DataContext.Provider>
