@@ -1,39 +1,40 @@
-
 import React, { useMemo, useState } from 'react';
 import { useData } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
-import { UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, PlusIcon, ClipboardListIcon } from '../components/Icons';
-// Fix: Import from react-router to resolve missing member error in some environments
+// Fix: Added ShieldIcon to the import list from icons component
+import { UsersIcon, BookOpenIcon, UserCheckIcon, BriefcaseIcon, PlusIcon, ClipboardListIcon, ShieldIcon } from '../components/Icons';
 import { NavLink } from 'react-router';
 import { DATABASE_SCHEMA_SQL } from '../constants/databaseSchema';
 import Modal from '../components/Modal';
 
-const StatCard = ({ title, value, icon, color, trend }: { title: string; value: number; icon: React.ReactNode; color: string; trend?: string }) => (
-    <div className="bg-white dark:bg-gray-800 p-8 rounded-[40px] shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden relative">
-        <div className="flex justify-between items-start z-10">
-            <div className={`p-4 bg-${color}-50 dark:bg-${color}-900/30 rounded-3xl group-hover:scale-110 transition-transform`}>
+const StatCard = ({ title, value, icon, gradient, color }: { title: string; value: number; icon: React.ReactNode; gradient: string; color: string }) => (
+    <div className={`group relative p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden`}>
+        {/* Decorative Gradient Background */}
+        <div className={`absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-20 transition-opacity blur-3xl`}></div>
+        
+        <div className="flex justify-between items-start relative z-10">
+            <div className={`p-5 rounded-3xl bg-slate-50 dark:bg-white/5 text-${color}-600 group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-${color}-500 group-hover:to-${color}-700 group-hover:text-white transition-all duration-500`}>
                 {icon}
             </div>
-            {trend && (
-                <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-800">
-                    +{trend}% ↗
-                </span>
-            )}
+            <div className="flex flex-col items-end">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{title}</span>
+                <span className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter font-mono">{value}</span>
+            </div>
         </div>
-        <div className="mt-8 z-10">
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black mb-1">{title}</p>
-            <p className="text-5xl font-black text-gray-900 dark:text-white leading-none tracking-tighter">{value}</p>
-        </div>
-        <div className={`absolute -bottom-10 -right-10 text-9xl opacity-5 group-hover:scale-150 transition-transform duration-1000 select-none pointer-events-none text-${color}-600`}>
-            {icon}
+        
+        <div className="mt-8 relative z-10">
+          <div className="w-full h-1 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+            <div className={`h-full bg-gradient-to-r ${gradient} w-[70%] group-hover:w-full transition-all duration-1000`}></div>
+          </div>
         </div>
     </div>
 );
 
-const QuickAction = ({ to, label, icon, bg }: { to: string; label: string; icon: React.ReactNode; bg: string }) => (
-    <NavLink to={to} className={`${bg} p-6 rounded-3xl flex items-center justify-between group hover:shadow-2xl transition-all text-white relative overflow-hidden active:scale-95`}>
-        <span className="font-black text-sm uppercase tracking-wider relative z-10">{label}</span>
-        <div className="p-3 bg-white/20 rounded-2xl group-hover:rotate-12 transition-transform relative z-10">
+const QuickAction = ({ to, label, icon, gradient }: { to: string; label: string; icon: React.ReactNode; gradient: string }) => (
+    <NavLink to={to} className={`bg-gradient-to-br ${gradient} p-8 rounded-[2.5rem] flex items-center justify-between group hover:shadow-2xl hover:scale-[1.02] transition-all text-white relative overflow-hidden active:scale-95`}>
+        <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors"></div>
+        <span className="font-black text-[13px] uppercase tracking-widest relative z-10">{label}</span>
+        <div className="p-4 bg-white/20 rounded-2xl group-hover:rotate-12 transition-transform relative z-10">
             {icon}
         </div>
     </NavLink>
@@ -54,10 +55,6 @@ const Dashboard = () => {
         }
     }, [students]);
 
-    const recentStudents = useMemo(() => {
-        return [...students].reverse().slice(0, 5);
-    }, [students]);
-
     const handleCopySQL = () => {
         navigator.clipboard.writeText(DATABASE_SCHEMA_SQL);
         setCopySuccess(true);
@@ -67,161 +64,144 @@ const Dashboard = () => {
     const connectionOk = isConfigValid && tableStatuses.length > 0 && tableStatuses.every(s => s.ok);
 
     return (
-        <div className="animate-fadeIn max-w-7xl mx-auto space-y-10 pb-10">
-            {!isConfigValid && (
-                <div className="bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-500 p-8 rounded-[32px] flex flex-col md:flex-row items-center gap-6">
-                    <div className="w-16 h-16 bg-rose-500 rounded-3xl flex items-center justify-center text-white text-3xl shrink-0">⚠️</div>
-                    <div>
-                        <h3 className="text-rose-600 dark:text-rose-400 font-black text-xl mb-1">Acesso Offline Ativado</h3>
-                        <p className="text-rose-700 dark:text-rose-300 text-sm font-bold opacity-80 leading-relaxed">
-                            O sistema detectou que a URL do Supabase não foi configurada. Você pode usar o app normalmente para testes locais, mas os dados não serão salvos na nuvem. 
-                            Atualize <code>lib/supabase.ts</code> para sincronizar.
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="animate-fadeIn space-y-12 pb-20">
+            <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
                 <div>
-                    <h1 className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">Painel de Gestão</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-3 text-lg font-medium">Controle operacional e métricas em tempo real.</p>
+                    <div className="flex items-center gap-3 mb-4">
+                        <span className="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest rounded-lg border border-blue-200 dark:border-blue-500/20">
+                            Version 6.9 Pro
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enterprise Management</span>
+                    </div>
+                    <h1 className="text-6xl font-black text-slate-900 dark:text-white tracking-tighter leading-[0.8]">Painel Geral</h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-6 text-xl font-medium max-w-xl">Bem-vindo à nova interface v6.9. Seus dados estão sincronizados e seguros.</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex items-center gap-4">
                     <button 
                         onClick={() => setIsHealthModalOpen(true)}
-                        className={`px-5 py-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border ${connectionOk ? 'border-emerald-100' : 'border-rose-100'} flex items-center transition-all hover:scale-105`}
+                        className={`px-6 py-4 rounded-2xl glass flex items-center gap-4 shadow-xl active:scale-95 transition-all`}
                     >
-                        <div className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500 animate-bounce' : (connectionOk ? 'bg-emerald-500' : 'bg-rose-500')} mr-3`}></div>
-                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
-                            {loading ? 'Verificando...' : (connectionOk ? 'Supabase Online' : 'Status: Local / Erro')}
+                        <div className={`w-3 h-3 rounded-full ${loading ? 'bg-amber-500 animate-pulse' : (connectionOk ? 'bg-emerald-500' : 'bg-rose-500')} shadow-[0_0_12px_rgba(16,185,129,0.5)]`}></div>
+                        <span className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-300 tracking-[0.2em]">
+                            {loading ? 'Verificando...' : (connectionOk ? 'Cloud Connect' : 'Network Error')}
                         </span>
                     </button>
                     {isAdmin && (
                         <button 
                             onClick={() => setIsSchemaModalOpen(true)}
-                            className="px-6 py-3 bg-gray-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-gray-900/20"
+                            className="p-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl shadow-2xl hover:scale-105 active:scale-95 transition-all"
+                            title="Script SQL"
                         >
-                            Script SQL
+                            <ShieldIcon className="h-5 w-5" />
                         </button>
                     )}
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <QuickAction to="/alunos" label="Nova Matrícula" icon={<PlusIcon className="h-6 w-6" />} bg="bg-blue-600" />
-                <QuickAction to="/cursos" label="Gerenciar Oferta" icon={<BookOpenIcon className="h-6 w-6" />} bg="bg-indigo-600" />
-                <QuickAction to="/relatorios" label="Extrair PDF" icon={<ClipboardListIcon className="h-6 w-6" />} bg="bg-emerald-600" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <QuickAction to="/alunos" label="Nova Matrícula" icon={<PlusIcon className="h-6 w-6" />} gradient="from-blue-600 to-indigo-700" />
+                <QuickAction to="/cursos" label="Gerir Oferta" icon={<BookOpenIcon className="h-6 w-6" />} gradient="from-violet-600 to-purple-700" />
+                <QuickAction to="/relatorios" label="Extrair Dados" icon={<ClipboardListIcon className="h-6 w-6" />} gradient="from-emerald-500 to-teal-700" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <StatCard title="Total de Alunos" value={students.length} icon={<UsersIcon className="h-8 w-8 text-blue-600" />} color="blue" />
-                <StatCard title="Cursos Ativos" value={courses.filter(c => c.status === 'Ativo').length} icon={<BookOpenIcon className="h-8 w-8 text-indigo-600" />} color="indigo" />
-                <StatCard title="Professores" value={teachers.length} icon={<UserCheckIcon className="h-8 w-8 text-amber-600" />} color="amber" />
-                <StatCard title="Patrocínios" value={partners.length} icon={<BriefcaseIcon className="h-8 w-8 text-emerald-600" />} color="emerald" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8">
+                <StatCard title="Estudantes" value={students.length} icon={<UsersIcon className="h-8 w-8" />} gradient="from-blue-500 to-blue-700" color="blue" />
+                <StatCard title="Cursos" value={courses.filter(c => c.status === 'Ativo').length} icon={<BookOpenIcon className="h-8 w-8" />} gradient="from-indigo-500 to-indigo-700" color="indigo" />
+                <StatCard title="Docentes" value={teachers.length} icon={<UserCheckIcon className="h-8 w-8" />} gradient="from-amber-500 to-orange-700" color="amber" />
+                <StatCard title="Empresas" value={partners.length} icon={<BriefcaseIcon className="h-8 w-8" />} gradient="from-emerald-500 to-emerald-700" color="emerald" />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                <div className="lg:col-span-2">
-                    <div className="bg-white dark:bg-gray-800 p-10 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700">
-                        <div className="flex justify-between items-center mb-8">
-                            <h2 className="text-2xl font-black tracking-tight">Status Acadêmico</h2>
-                            <button onClick={refreshData} className="text-[10px] font-black uppercase text-blue-500 hover:underline">Atualizar Dados</button>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+                <div className="xl:col-span-2">
+                    <div className="bg-white dark:bg-slate-900 p-12 rounded-[3rem] shadow-sm border border-slate-100 dark:border-white/5 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                        <div className="flex justify-between items-center mb-10 relative z-10">
+                            <div>
+                                <h2 className="text-3xl font-black tracking-tighter">Fluxo Acadêmico</h2>
+                                <p className="text-slate-400 text-sm font-bold mt-1 uppercase tracking-widest">Tempo Real</p>
+                            </div>
+                            <button onClick={refreshData} className="px-4 py-2 bg-slate-50 dark:bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all">Sincronizar</button>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-                            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl text-center">
-                                <p className="text-[10px] font-black uppercase text-blue-400 mb-1">Cursando</p>
-                                <p className="text-3xl font-black text-blue-600">{studentStats.cursando}</p>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl text-center">
-                                <p className="text-[10px] font-black uppercase text-emerald-400 mb-1">Aprovados</p>
-                                <p className="text-3xl font-black text-emerald-600">{studentStats.concluidos}</p>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl text-center">
-                                <p className="text-[10px] font-black uppercase text-rose-400 mb-1">Evasão</p>
-                                <p className="text-3xl font-black text-rose-600">{studentStats.evasao}</p>
-                            </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 relative z-10">
+                            {[
+                                { label: 'Cursando', val: studentStats.cursando, color: 'blue' },
+                                { label: 'Aprovados', val: studentStats.concluidos, color: 'emerald' },
+                                { label: 'Evasão', val: studentStats.evasao, color: 'rose' }
+                            ].map((item) => (
+                                <div key={item.label} className="p-8 rounded-[2rem] bg-slate-50/50 dark:bg-white/5 border border-slate-100 dark:border-white/5 group hover:scale-105 transition-transform duration-500">
+                                    <p className={`text-[10px] font-black uppercase text-${item.color}-500 mb-2 tracking-[0.2em]`}>{item.label}</p>
+                                    <p className={`text-4xl font-mono font-black text-slate-900 dark:text-white`}>{item.val}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 p-10 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700">
-                    <h2 className="text-2xl font-black mb-8">Novas Matrículas</h2>
-                    <div className="space-y-6">
-                        {recentStudents.length > 0 ? recentStudents.map(s => (
-                            <div key={s.id} className="flex items-center gap-4 group">
-                                <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center font-black text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                <div className="bg-white dark:bg-slate-900 p-12 rounded-[3rem] shadow-sm border border-slate-100 dark:border-white/5">
+                    <h2 className="text-3xl font-black tracking-tighter mb-10">Últimas Atividades</h2>
+                    <div className="space-y-8">
+                        {students.slice(-4).reverse().map(s => (
+                            <div key={s.id} className="flex items-center gap-5 group">
+                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-white/5 dark:to-white/10 flex items-center justify-center font-black text-blue-600 group-hover:scale-110 transition-transform">
                                     {s.name.charAt(0)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-black text-gray-900 dark:text-white truncate">{s.name}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase">{s.status}</p>
+                                    <p className="text-sm font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">{s.name}</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Matrícula Realizada</p>
                                 </div>
+                                <div className={`w-2 h-2 rounded-full ${s.status === 'CURSANDO' ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-emerald-500'}`}></div>
                             </div>
-                        )) : (
-                            <p className="text-center py-10 text-gray-400 font-bold uppercase text-[10px]">Sem dados</p>
-                        )}
+                        ))}
                     </div>
                 </div>
             </div>
 
-            <Modal isOpen={isSchemaModalOpen} onClose={() => setIsSchemaModalOpen(false)} title="Script SQL Purificado">
-                <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-r-2xl">
-                        <p className="text-[11px] text-blue-700 dark:text-blue-300 font-bold leading-relaxed">
-                            Crie seu banco de dados no Supabase e execute este script no SQL Editor para configurar as tabelas automaticamente.
+            {/* Modals with premium styling */}
+            <Modal isOpen={isSchemaModalOpen} onClose={() => setIsSchemaModalOpen(false)} title="Terminal de Dados">
+                <div className="space-y-6">
+                    <div className="p-6 bg-blue-500/10 border-l-4 border-blue-500 rounded-r-2xl">
+                        <p className="text-[12px] text-blue-600 dark:text-blue-300 font-black uppercase tracking-widest leading-loose">
+                            Implementação de Segurança v6.9: Use este script para provisionar tabelas em ambientes de produção.
                         </p>
                     </div>
-                    <div className="relative">
-                        <pre className="bg-gray-900 text-emerald-400 p-6 rounded-2xl text-[10px] font-mono overflow-x-auto max-h-[400px] custom-scrollbar border border-gray-800">
+                    <div className="relative group">
+                        <pre className="bg-slate-950 text-emerald-400 p-8 rounded-[2rem] text-[11px] font-mono overflow-x-auto max-h-[450px] custom-scrollbar border border-white/5">
                             {DATABASE_SCHEMA_SQL}
                         </pre>
                         <button 
                             onClick={handleCopySQL}
-                            className={`absolute top-4 right-4 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${copySuccess ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                            className={`absolute top-6 right-6 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-2xl ${copySuccess ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                         >
-                            {copySuccess ? 'Copiado!' : 'Copiar SQL'}
+                            {copySuccess ? 'Sucesso!' : 'Copiar Terminal'}
                         </button>
                     </div>
                 </div>
             </Modal>
 
-            <Modal isOpen={isHealthModalOpen} onClose={() => setIsHealthModalOpen(false)} title="Teste de Conexões">
-                <div className="space-y-4">
-                    {!isConfigValid && (
-                         <div className="p-6 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 rounded-3xl border border-rose-100 dark:border-rose-900/50">
-                            <h4 className="font-black text-xs uppercase mb-2">🔴 Erro de DNS Detectado</h4>
-                            <p className="text-xs font-medium leading-relaxed">
-                                O navegador não consegue resolver o servidor do Supabase. <br/><br/>
-                                <b>Solução:</b> Acesse <code>lib/supabase.ts</code> e insira uma URL válida como <code>https://abcxyz.supabase.co</code>. 
-                                Atualmente o sistema ignora a URL para evitar travar a interface.
-                            </p>
-                         </div>
-                    )}
-                    
-                    <div className="grid grid-cols-1 gap-2">
+            <Modal isOpen={isHealthModalOpen} onClose={() => setIsHealthModalOpen(false)} title="Diagnóstico Cloud">
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 gap-4">
                         {tableStatuses.map(status => (
-                            <div key={status.name} className={`p-4 rounded-2xl border flex flex-col gap-1 ${status.ok ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/50' : 'bg-rose-50/50 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/50'}`}>
+                            <div key={status.name} className={`p-6 rounded-[2rem] border transition-all ${status.ok ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-rose-500/5 border-rose-500/20'}`}>
                                 <div className="flex items-center justify-between">
-                                    <span className="font-black text-xs uppercase tracking-tight">{status.name}</span>
-                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${status.ok ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
-                                        {status.ok ? 'Sucesso' : 'Erro'}
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-2 h-2 rounded-full ${status.ok ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
+                                        <span className="font-black text-xs uppercase tracking-[0.2em]">{status.name}</span>
+                                    </div>
+                                    <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-lg ${status.ok ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                                        {status.ok ? 'Ativo' : 'Erro'}
                                     </span>
                                 </div>
-                                {status.error && <p className="text-[9px] font-bold text-rose-600 dark:text-rose-400 truncate">{status.error}</p>}
-                                <p className="text-[8px] text-gray-400 font-medium">Último teste: {status.testedAt || 'Nunca'}</p>
+                                {status.error && <p className="mt-3 text-[10px] font-bold text-rose-500 bg-rose-500/10 p-2 rounded-lg line-clamp-1">{status.error}</p>}
                             </div>
                         ))}
                     </div>
-
-                    <div className="pt-4 flex gap-3">
-                        <button 
-                            onClick={testAllConnections}
-                            disabled={loading}
-                            className="flex-1 px-6 py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50"
-                        >
-                            {loading ? 'Testando...' : 'Re-testar Todas Conexões'}
-                        </button>
-                    </div>
+                    <button 
+                        onClick={testAllConnections}
+                        className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-2xl shadow-blue-500/30"
+                    >
+                        Revalidar Infraestrutura
+                    </button>
                 </div>
             </Modal>
         </div>
