@@ -51,7 +51,7 @@ const ReportsPage = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-auto">
                         <button
                             onClick={handleGeneratePdfList}
-                            className="px-6 py-4 bg-gray-900 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-gray-800 transition-all shadow-xl active:scale-95"
+                            className="px-6 py-4 bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-800 transition-all shadow-xl active:scale-95"
                         >
                             Exportar PDF
                         </button>
@@ -92,14 +92,14 @@ const ReportsPage = () => {
                         <button
                             onClick={handleGeneratePdfByCourse}
                             disabled={!selectedCourse}
-                            className="px-6 py-4 bg-gray-900 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-gray-800 transition-all shadow-xl active:scale-95 disabled:bg-gray-200 disabled:shadow-none"
+                            className="px-6 py-4 bg-slate-900 disabled:bg-slate-100 dark:disabled:bg-slate-700 text-white disabled:text-slate-400 dark:disabled:text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-800 transition-all shadow-xl active:scale-95 disabled:shadow-none disabled:cursor-not-allowed"
                         >
                             Gerar PDF
                         </button>
                         <button
                             onClick={handleGenerateExcelByCourse}
                             disabled={!selectedCourse}
-                            className="px-6 py-4 bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20 active:scale-95 disabled:bg-gray-200 disabled:shadow-none"
+                            className="px-6 py-4 bg-emerald-600 disabled:bg-slate-100 dark:disabled:bg-slate-700 text-white disabled:text-slate-400 dark:disabled:text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20 active:scale-95 disabled:shadow-none disabled:cursor-not-allowed"
                         >
                             Gerar Planilha (XLSX)
                         </button>
