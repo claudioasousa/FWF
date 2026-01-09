@@ -55,7 +55,11 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 const CACHE_KEY = 'gc_data_cache_v2';
 const OUTBOX_KEY = 'gc_outbox_queue_v2';
 
-const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+// Função utilitária para verificar se uma string é um UUID válido
+const isUUID = (id: any) => {
+  if (typeof id !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+};
 
 const MOCK_DATA = {
   partners: [{ id: 'p1', companyName: 'Parceiro Exemplo Local', responsible: 'Admin', contact: '0000000', address: 'Local' }],
@@ -140,11 +144,20 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         supabase.from('students').select('*'),
         supabase.from('users').select('*').order('is_online', { ascending: false })
       ]);
-      if (p.data) setPartners(p.data.map(i => ({ id: i.id, companyName: i.company_name, responsible: i.responsible, contact: i.contact, address: i.address })));
-      if (t.data) setTeachers(t.data);
-      if (c.data) setCourses(c.data.map(i => ({ id: i.id, name: i.name, workload: i.workload, startDate: i.start_date, endDate: i.end_date, startTime: i.start_time, endTime: i.end_time, period: i.period, location: i.location, partnerId: i.partner_id, status: i.status, teacherIds: [] })));
-      if (s.data) setStudents(s.data.map(i => ({ id: i.id, name: i.name, cpf: i.cpf, contact: i.contact, birthDate: i.birth_date, address: i.address, courseId: i.course_id, status: i.status, class: i.class })));
-      if (u.data) setUsers(u.data.map(i => ({ id: i.id, name: i.name, username: i.username, role: i.role, isOnline: i.is_online, lastSeen: i.last_seen })));
+      
+      const newPartners = p.data ? p.data.map(i => ({ id: i.id, companyName: i.company_name, responsible: i.responsible, contact: i.contact, address: i.address })) : partners;
+      const newTeachers = t.data || teachers;
+      const newCourses = c.data ? c.data.map(i => ({ id: i.id, name: i.name, workload: i.workload, startDate: i.start_date, endDate: i.end_date, startTime: i.start_time, endTime: i.end_time, period: i.period, location: i.location, partnerId: i.partner_id, status: i.status, teacherIds: [] })) : courses;
+      const newStudents = s.data ? s.data.map(i => ({ id: i.id, name: i.name, cpf: i.cpf, contact: i.contact, birthDate: i.birth_date, address: i.address, courseId: i.course_id, status: i.status, class: i.class })) : students;
+      const newUsers = u.data ? u.data.map(i => ({ id: i.id, name: i.name, username: i.username, role: i.role, isOnline: i.is_online, lastSeen: i.last_seen })) : users;
+
+      setPartners(newPartners);
+      setTeachers(newTeachers);
+      setCourses(newCourses);
+      setStudents(newStudents);
+      setUsers(newUsers);
+
+      saveToCache({ students: newStudents, teachers: newTeachers, courses: newCourses, partners: newPartners, users: newUsers });
       setIsOffline(false);
     } catch (err) { setIsOffline(true); } finally { setLoading(false); }
   };
@@ -153,62 +166,106 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     if (!navigator.onLine || !isConfigured || outbox.length === 0) return;
     const items = [...outbox];
     const failed = [];
+    
     for (const item of items) {
       try {
         let res;
-        if (item.action === 'INSERT') res = await supabase.from(item.table).insert([item.payload]);
+        // Se for UPDATE ou DELETE e o ID não for um UUID válido, 
+        // significa que o registro ainda não existe no Supabase. 
+        // Devemos pular e deixar o INSERT original rodar primeiro.
+        if ((item.action === 'UPDATE' || item.action === 'DELETE') && !isUUID(item.payload.id)) {
+            failed.push(item);
+            continue;
+        }
+
+        if (item.action === 'INSERT') {
+          // Remove ID temporário antes de enviar para o Supabase gerar um UUID real
+          const { id: tempId, ...cleanPayload } = item.payload;
+          res = await supabase.from(item.table).insert([cleanPayload]);
+        } 
         else if (item.action === 'UPDATE') {
           const { id, ...rest } = item.payload;
           res = await supabase.from(item.table).update(rest).eq('id', id);
         }
-        else if (item.action === 'DELETE') res = await supabase.from(item.table).delete().eq('id', item.payload.id);
+        else if (item.action === 'DELETE') {
+          res = await supabase.from(item.table).delete().eq('id', item.payload.id);
+        }
         
         if (res?.error) throw res.error;
       } catch (e) {
+        console.error("Erro na sincronização do item:", item, e);
         failed.push(item);
       }
     }
+    
     setOutbox(failed);
     localStorage.setItem(OUTBOX_KEY, JSON.stringify(failed));
-    if (failed.length < items.length) refreshData();
+    if (failed.length < items.length) await refreshData();
   };
 
   const handleAction = async (table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', payload: any, updateLocalState: () => void) => {
-    updateLocalState();
-    if (navigator.onLine && isConfigured) {
-      if ((action === 'UPDATE' || action === 'DELETE') && payload.id && !isUUID(payload.id)) return;
+    // Se estivermos tentando editar ou deletar algo sem UUID, tratamos apenas como ação de Outbox
+    const needsUuid = action === 'UPDATE' || action === 'DELETE';
+    const hasValidUuid = payload.id && isUUID(payload.id);
+
+    if (navigator.onLine && isConfigured && (!needsUuid || hasValidUuid)) {
       try {
         let res;
-        if (action === 'INSERT') res = await supabase.from(table).insert([payload]);
+        if (action === 'INSERT') {
+            const { id: tempId, ...cleanPayload } = payload;
+            res = await supabase.from(table).insert([cleanPayload]);
+        }
         else if (action === 'UPDATE') {
           const { id, ...rest } = payload;
           res = await supabase.from(table).update(rest).eq('id', id);
         }
-        else if (action === 'DELETE') res = await supabase.from(table).delete().eq('id', payload.id);
+        else if (action === 'DELETE') {
+          res = await supabase.from(table).delete().eq('id', payload.id);
+        }
+        
         if (res?.error) throw res.error;
+        await refreshData();
+        return;
       } catch (e) {
-        const newItem = { id: Math.random().toString(36).substr(2, 9), table, action, payload, timestamp: Date.now() };
-        setOutbox(prev => {
-          const up = [...prev, newItem];
-          localStorage.setItem(OUTBOX_KEY, JSON.stringify(up));
-          return up;
-        });
+        console.warn("Falha ao enviar, movendo para Outbox:", e);
       }
     }
+
+    // Se falhar ou estiver offline/sem UUID, vai para o Outbox
+    const newItem = { 
+        id: Math.random().toString(36).substr(2, 9), 
+        table, 
+        action, 
+        payload, 
+        timestamp: Date.now() 
+    };
+    
+    setOutbox(prev => {
+      const up = [...prev, newItem];
+      localStorage.setItem(OUTBOX_KEY, JSON.stringify(up));
+      return up;
+    });
+
+    // Atualização otimista do estado local (mesmo offline)
+    updateLocalState();
   };
 
   const addStudent = (d: any) => handleAction('students', 'INSERT', { name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: isUUID(d.courseId) ? d.courseId : null, status: d.status, class: d.class || null }, () => refreshData());
   const updateStudent = (d: any) => handleAction('students', 'UPDATE', { id: d.id, name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: isUUID(d.courseId) ? d.courseId : null, status: d.status, class: d.class || null }, () => refreshData());
   const removeStudent = (id: string) => handleAction('students', 'DELETE', { id }, () => refreshData());
+  
   const addCourse = (d: any) => handleAction('courses', 'INSERT', { name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: isUUID(d.partnerId) ? d.partnerId : null, status: d.status }, () => refreshData());
   const updateCourse = (d: any) => handleAction('courses', 'UPDATE', { id: d.id, name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: isUUID(d.partnerId) ? d.partnerId : null, status: d.status }, () => refreshData());
   const removeCourse = (id: string) => handleAction('courses', 'DELETE', { id }, () => refreshData());
+  
   const addTeacher = (d: any) => handleAction('teachers', 'INSERT', d, () => refreshData());
   const updateTeacher = (d: any) => handleAction('teachers', 'UPDATE', d, () => refreshData());
   const removeTeacher = (id: string) => handleAction('teachers', 'DELETE', { id }, () => refreshData());
+  
   const addPartner = (d: any) => handleAction('partners', 'INSERT', { company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address }, () => refreshData());
   const updatePartner = (d: any) => handleAction('partners', 'UPDATE', { id: d.id, company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address }, () => refreshData());
   const removePartner = (id: string) => handleAction('partners', 'DELETE', { id }, () => refreshData());
+  
   const addUser = (d: any) => handleAction('users', 'INSERT', d, () => refreshData());
   const updateUser = (d: any) => handleAction('users', 'UPDATE', d, () => refreshData());
   const removeUser = (id: string) => handleAction('users', 'DELETE', { id }, () => refreshData());
