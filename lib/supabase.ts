@@ -1,17 +1,19 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.1';
 
-// ATENÇÃO: Substitua as informações abaixo pelas credenciais do SEU projeto no Supabase
-// Você encontra isso em: Project Settings -> API
-const supabaseUrl = 'https://fpuetcwkvzejpooguac.supabase.co'; 
-const supabaseKey = 'sb_publishable_k1IJsKmejk4jmqpNReSPfg_fJ1I6qsS';
+// --- CONFIGURAÇÃO DO SUPABASE ---
+// Para usar o banco de dados real, substitua as strings abaixo:
+const supabaseUrl = 'https://SUA_URL_AQUI.supabase.co'; 
+const supabaseKey = 'SUA_CHAVE_ANON_AQUI';
+// --------------------------------
 
-// Validação básica para evitar erros fatais se os campos estiverem vazios ou forem placeholders
-const isValidConfig = supabaseUrl.includes('supabase.co') && !supabaseKey.startsWith('your_');
+// Verifica se as strings acima foram alteradas de fato
+const isDefault = supabaseUrl.includes('SUA_URL_AQUI') || !supabaseUrl.startsWith('https://');
 
+export const isConfigured = !isDefault;
+
+// Só cria o cliente real se estiver configurado, evitando ERR_NAME_NOT_RESOLVED
 export const supabase = createClient(
-  isValidConfig ? supabaseUrl : 'https://placeholder-url.supabase.co', 
-  isValidConfig ? supabaseKey : 'placeholder-key'
+  isConfigured ? supabaseUrl : 'https://placeholder.supabase.co', 
+  isConfigured ? supabaseKey : 'placeholder'
 );
-
-export const isConfigured = isValidConfig;

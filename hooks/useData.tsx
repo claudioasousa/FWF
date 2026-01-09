@@ -50,6 +50,25 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 const CACHE_KEY = 'gc_data_cache_v1';
 const OUTBOX_KEY = 'gc_outbox_queue_v1';
 
+// Dados iniciais para o sistema não começar vazio
+const MOCK_DATA = {
+  partners: [
+    { id: 'p1', company_name: 'Tech Sponsorship S.A', responsible: 'Ricardo Silva', contact: '1199999999', address: 'Av. Paulista, 1000' }
+  ],
+  teachers: [
+    { id: 't1', name: 'Dr. Roberto Mendes', email: 'roberto@email.com', contact: '1198888888', specialization: 'Inteligência Artificial' }
+  ],
+  courses: [
+    { id: 'c1', name: 'Desenvolvimento Web Fullstack', workload: 360, start_date: '2024-03-01', end_date: '2024-12-01', start_time: '19:00', end_time: '22:30', period: 'Noite', location: 'Polo Central', status: 'Ativo', partner_id: 'p1' }
+  ],
+  students: [
+    { id: 's1', name: 'João Aluno Exemplo', cpf: '12345678901', contact: '1197777777', birth_date: '2000-01-01', address: 'Rua das Flores, 123', status: 'CURSANDO', class: 'A', course_id: 'c1' }
+  ],
+  users: [
+    { id: 'u1', name: 'Admin do Sistema', username: 'admin', role: 'ADMIN', is_online: true }
+  ]
+};
+
 export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -57,13 +76,14 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine || !isConfigured);
   const [outbox, setOutbox] = useState<OutboxItem[]>(() => {
     const saved = localStorage.getItem(OUTBOX_KEY);
     return saved ? JSON.parse(saved) : [];
   });
   const [tableStatuses, setTableStatuses] = useState<TableStatus[]>([]);
 
+  // Carregar do Cache ou MockData
   useEffect(() => {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
@@ -75,79 +95,30 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         setPartners(data.partners || []);
         setUsers(data.users || []);
       } catch (e) {
-        console.error("Erro ao ler cache local", e);
+        console.error("Erro ao ler cache");
       }
+    } else {
+      // Se não houver nada, usa o Mock Data
+      setStudents(MOCK_DATA.students as any);
+      setTeachers(MOCK_DATA.teachers as any);
+      setCourses(MOCK_DATA.courses as any);
+      setPartners(MOCK_DATA.partners as any);
+      setUsers(MOCK_DATA.users as any);
     }
   }, []);
 
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOffline(false);
-      processOutbox();
-    };
-    const handleOffline = () => setIsOffline(true);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [outbox]);
-
-  const saveToCache = (data: any) => {
+  const saveToCache = useCallback((data: any) => {
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-  };
-
-  const addToOutbox = (item: Omit<OutboxItem, 'id' | 'timestamp'>) => {
-    const newItem: OutboxItem = {
-      ...item,
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: Date.now()
-    };
-    const newOutbox = [...outbox, newItem];
-    setOutbox(newOutbox);
-    localStorage.setItem(OUTBOX_KEY, JSON.stringify(newOutbox));
-  };
-
-  const processOutbox = useCallback(async () => {
-    if (outbox.length === 0 || !navigator.onLine || !isConfigured) return;
-
-    const remainingOutbox = [...outbox];
-    
-    for (const item of outbox) {
-      try {
-        let error = null;
-        if (item.action === 'INSERT') {
-          const { error: err } = await supabase.from(item.table).insert([item.payload]);
-          error = err;
-        } else if (item.action === 'UPDATE') {
-          const { error: err } = await supabase.from(item.table).update(item.payload).eq('id', item.payload.id);
-          error = err;
-        } else if (item.action === 'DELETE') {
-          const { error: err } = await supabase.from(item.table).delete().eq('id', item.payload.id);
-          error = err;
-        }
-
-        if (!error || error.code === 'PGRST116') {
-          const index = remainingOutbox.findIndex(i => i.id === item.id);
-          if (index > -1) remainingOutbox.splice(index, 1);
-        } else {
-          break; // Para se houver erro de conexão
-        }
-      } catch (e) {
-        break; 
-      }
-    }
-
-    setOutbox(remainingOutbox);
-    localStorage.setItem(OUTBOX_KEY, JSON.stringify(remainingOutbox));
-    await refreshData();
-  }, [outbox]);
+  }, []);
 
   const refreshData = async () => {
-    if (!navigator.onLine || !isConfigured) {
+    // Se não estiver configurado, nem tenta a rede para evitar erros de DNS
+    if (!isConfigured) {
       setLoading(false);
+      setIsOffline(true);
+      setTableStatuses([
+        { name: 'Geral', ok: false }
+      ]);
       return;
     }
     
@@ -173,7 +144,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
       setTableStatuses(statuses);
 
-      // Processar dados apenas das promessas que deram certo
       if (results[0].status === 'fulfilled' && results[0].value.data) {
         setPartners(results[0].value.data.map(p => ({
           id: p.id, companyName: p.company_name, responsible: p.responsible, contact: p.contact, address: p.address
@@ -202,8 +172,8 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
       }
 
       saveToCache({ students, teachers, courses, partners, users });
+      setIsOffline(false);
     } catch (err) {
-      console.warn('Falha na rede ao tentar sincronizar. Operando em modo offline.');
       setIsOffline(true);
     } finally {
       setLoading(false);
@@ -212,11 +182,27 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   useEffect(() => {
     refreshData();
-  }, []);
+  }, [isConfigured]);
+
+  const addToOutbox = (item: Omit<OutboxItem, 'id' | 'timestamp'>) => {
+    const newItem: OutboxItem = {
+      ...item,
+      id: Math.random().toString(36).substr(2, 9),
+      timestamp: Date.now()
+    };
+    const newOutbox = [...outbox, newItem];
+    setOutbox(newOutbox);
+    localStorage.setItem(OUTBOX_KEY, JSON.stringify(newOutbox));
+  };
 
   const handleAction = async (table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', payload: any, updateLocalState: () => void) => {
     updateLocalState();
     
+    // Atualiza cache local imediatamente
+    setTimeout(() => {
+        saveToCache({ students, teachers, courses, partners, users });
+    }, 100);
+
     if (navigator.onLine && isConfigured) {
       try {
         let error;
@@ -232,7 +218,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         }
         
         if (error) throw error;
-        await refreshData();
       } catch (e) {
         addToOutbox({ table, action, payload });
       }
