@@ -5,7 +5,10 @@ import type { Student, Teacher, Course, Partner, User } from '../types';
 
 interface TableStatus {
   name: string;
+  table: string;
   ok: boolean;
+  error?: string;
+  testedAt?: string;
 }
 
 interface OutboxItem {
@@ -28,6 +31,7 @@ interface DataContextType {
   tableStatuses: TableStatus[];
   isConfigValid: boolean;
   refreshData: () => Promise<void>;
+  testAllConnections: () => Promise<void>;
   addStudent: (student: Omit<Student, 'id'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;
   removeStudent: (id: string) => Promise<void>;
@@ -47,25 +51,22 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const CACHE_KEY = 'gc_data_cache_v1';
-const OUTBOX_KEY = 'gc_outbox_queue_v1';
+const CACHE_KEY = 'gc_data_cache_v2';
+const OUTBOX_KEY = 'gc_outbox_queue_v2';
 
-// Dados iniciais para o sistema não começar vazio
 const MOCK_DATA = {
   partners: [
-    { id: 'p1', company_name: 'Tech Sponsorship S.A', responsible: 'Ricardo Silva', contact: '1199999999', address: 'Av. Paulista, 1000' }
+    { id: 'p1', companyName: 'Parceiro Exemplo Local', responsible: 'Admin', contact: '0000000', address: 'Local' }
   ],
   teachers: [
-    { id: 't1', name: 'Dr. Roberto Mendes', email: 'roberto@email.com', contact: '1198888888', specialization: 'Inteligência Artificial' }
+    { id: 't1', name: 'Professor Exemplo Local', email: 'prof@local.com', contact: '0000000', specialization: 'Geral' }
   ],
   courses: [
-    { id: 'c1', name: 'Desenvolvimento Web Fullstack', workload: 360, start_date: '2024-03-01', end_date: '2024-12-01', start_time: '19:00', end_time: '22:30', period: 'Noite', location: 'Polo Central', status: 'Ativo', partner_id: 'p1' }
+    { id: 'c1', name: 'Curso Exemplo Local', workload: 40, startDate: '2024-01-01', endDate: '2024-12-31', startTime: '08:00', endTime: '12:00', period: 'Manhã', location: 'Local', status: 'Ativo', partnerId: 'p1', teacherIds: [] }
   ],
-  students: [
-    { id: 's1', name: 'João Aluno Exemplo', cpf: '12345678901', contact: '1197777777', birth_date: '2000-01-01', address: 'Rua das Flores, 123', status: 'CURSANDO', class: 'A', course_id: 'c1' }
-  ],
+  students: [],
   users: [
-    { id: 'u1', name: 'Admin do Sistema', username: 'admin', role: 'ADMIN', is_online: true }
+    { id: 'u1', name: 'Admin Local', username: 'admin', role: 'ADMIN', isOnline: true }
   ]
 };
 
@@ -81,10 +82,20 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     const saved = localStorage.getItem(OUTBOX_KEY);
     return saved ? JSON.parse(saved) : [];
   });
-  const [tableStatuses, setTableStatuses] = useState<TableStatus[]>([]);
+  
+  const [tableStatuses, setTableStatuses] = useState<TableStatus[]>([
+    { name: 'Parceiros', table: 'partners', ok: false },
+    { name: 'Professores', table: 'teachers', ok: false },
+    { name: 'Cursos', table: 'courses', ok: false },
+    { name: 'Alunos', table: 'students', ok: false },
+    { name: 'Usuários', table: 'users', ok: false },
+  ]);
 
-  // Carregar do Cache ou MockData
-  useEffect(() => {
+  const saveToCache = useCallback((data: any) => {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+  }, []);
+
+  const loadInitialData = useCallback(() => {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       try {
@@ -98,7 +109,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         console.error("Erro ao ler cache");
       }
     } else {
-      // Se não houver nada, usa o Mock Data
       setStudents(MOCK_DATA.students as any);
       setTeachers(MOCK_DATA.teachers as any);
       setCourses(MOCK_DATA.courses as any);
@@ -107,18 +117,55 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     }
   }, []);
 
-  const saveToCache = useCallback((data: any) => {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-  }, []);
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  const testAllConnections = async () => {
+    if (!isConfigured) {
+      setTableStatuses(prev => prev.map(s => ({ ...s, ok: false, error: 'Banco não configurado', testedAt: new Date().toLocaleTimeString() })));
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const newStatuses: TableStatus[] = [];
+    const tables = [
+      { name: 'Parceiros', table: 'partners' },
+      { name: 'Professores', table: 'teachers' },
+      { name: 'Cursos', table: 'courses' },
+      { name: 'Alunos', table: 'students' },
+      { name: 'Usuários', table: 'users' },
+    ];
+
+    for (const t of tables) {
+      try {
+        const { error } = await supabase.from(t.table).select('count', { count: 'exact', head: true });
+        newStatuses.push({
+          ...t,
+          ok: !error,
+          error: error ? `${error.code}: ${error.message}` : undefined,
+          testedAt: new Date().toLocaleTimeString()
+        });
+      } catch (e) {
+        newStatuses.push({
+          ...t,
+          ok: false,
+          error: 'Erro de Rede',
+          testedAt: new Date().toLocaleTimeString()
+        });
+      }
+    }
+
+    setTableStatuses(newStatuses);
+    setLoading(false);
+    if (newStatuses.every(s => s.ok)) await refreshData();
+  };
 
   const refreshData = async () => {
-    // Se não estiver configurado, nem tenta a rede para evitar erros de DNS
     if (!isConfigured) {
       setLoading(false);
       setIsOffline(true);
-      setTableStatuses([
-        { name: 'Geral', ok: false }
-      ]);
       return;
     }
     
@@ -131,18 +178,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         supabase.from('students').select('*'),
         supabase.from('users').select('*').order('is_online', { ascending: false })
       ]);
-
-      const statuses: TableStatus[] = [];
-      const tables = ['Parceiros', 'Professores', 'Cursos', 'Alunos', 'Usuários'];
-
-      results.forEach((res, idx) => {
-        statuses.push({
-          name: tables[idx],
-          ok: res.status === 'fulfilled' && !res.value.error
-        });
-      });
-
-      setTableStatuses(statuses);
 
       if (results[0].status === 'fulfilled' && results[0].value.data) {
         setPartners(results[0].value.data.map(p => ({
@@ -181,27 +216,16 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   };
 
   useEffect(() => {
-    refreshData();
+    if (isConfigured) {
+      testAllConnections();
+    } else {
+      setLoading(false);
+    }
   }, [isConfigured]);
-
-  const addToOutbox = (item: Omit<OutboxItem, 'id' | 'timestamp'>) => {
-    const newItem: OutboxItem = {
-      ...item,
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: Date.now()
-    };
-    const newOutbox = [...outbox, newItem];
-    setOutbox(newOutbox);
-    localStorage.setItem(OUTBOX_KEY, JSON.stringify(newOutbox));
-  };
 
   const handleAction = async (table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', payload: any, updateLocalState: () => void) => {
     updateLocalState();
-    
-    // Atualiza cache local imediatamente
-    setTimeout(() => {
-        saveToCache({ students, teachers, courses, partners, users });
-    }, 100);
+    setTimeout(() => saveToCache({ students, teachers, courses, partners, users }), 100);
 
     if (navigator.onLine && isConfigured) {
       try {
@@ -216,13 +240,15 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
           const { error: err } = await supabase.from(table).delete().eq('id', payload.id);
           error = err;
         }
-        
         if (error) throw error;
       } catch (e) {
-        addToOutbox({ table, action, payload });
+        const newItem: OutboxItem = { id: Math.random().toString(36).substr(2, 9), table, action, payload, timestamp: Date.now() };
+        setOutbox(prev => {
+          const updated = [...prev, newItem];
+          localStorage.setItem(OUTBOX_KEY, JSON.stringify(updated));
+          return updated;
+        });
       }
-    } else {
-      addToOutbox({ table, action, payload });
     }
   };
 
@@ -290,7 +316,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   return (
     <DataContext.Provider value={{
-      students, teachers, courses, partners, users, loading, isOffline, pendingSyncCount: outbox.length, tableStatuses, isConfigValid: isConfigured, refreshData,
+      students, teachers, courses, partners, users, loading, isOffline, pendingSyncCount: outbox.length, tableStatuses, isConfigValid: isConfigured, refreshData, testAllConnections,
       addStudent, updateStudent, removeStudent,
       addTeacher, updateTeacher, removeTeacher,
       addCourse, updateCourse, removeCourse,

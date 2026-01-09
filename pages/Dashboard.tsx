@@ -40,7 +40,7 @@ const QuickAction = ({ to, label, icon, bg }: { to: string; label: string; icon:
 );
 
 const Dashboard = () => {
-    const { students, courses, teachers, partners, loading, tableStatuses, refreshData, isConfigValid } = useData();
+    const { students, courses, teachers, partners, loading, tableStatuses, refreshData, testAllConnections, isConfigValid } = useData();
     const { isAdmin } = useAuth();
     const [isSchemaModalOpen, setIsSchemaModalOpen] = useState(false);
     const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
@@ -69,11 +69,15 @@ const Dashboard = () => {
     return (
         <div className="animate-fadeIn max-w-7xl mx-auto space-y-10 pb-10">
             {!isConfigValid && (
-                <div className="bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-500 p-8 rounded-[32px] animate-pulse">
-                    <h3 className="text-rose-600 dark:text-rose-400 font-black text-xl mb-2">⚠️ Configuração Necessária</h3>
-                    <p className="text-rose-700 dark:text-rose-300 text-sm font-bold">
-                        O sistema está operando em <b>Modo Local</b>. Para habilitar a nuvem, atualize as credenciais no arquivo <code>lib/supabase.ts</code> com a URL e Chave do seu projeto.
-                    </p>
+                <div className="bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-500 p-8 rounded-[32px] flex flex-col md:flex-row items-center gap-6">
+                    <div className="w-16 h-16 bg-rose-500 rounded-3xl flex items-center justify-center text-white text-3xl shrink-0">⚠️</div>
+                    <div>
+                        <h3 className="text-rose-600 dark:text-rose-400 font-black text-xl mb-1">Acesso Offline Ativado</h3>
+                        <p className="text-rose-700 dark:text-rose-300 text-sm font-bold opacity-80 leading-relaxed">
+                            O sistema detectou que a URL do Supabase não foi configurada. Você pode usar o app normalmente para testes locais, mas os dados não serão salvos na nuvem. 
+                            Atualize <code>lib/supabase.ts</code> para sincronizar.
+                        </p>
+                    </div>
                 </div>
             )}
 
@@ -89,7 +93,7 @@ const Dashboard = () => {
                     >
                         <div className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500 animate-bounce' : (connectionOk ? 'bg-emerald-500' : 'bg-rose-500')} mr-3`}></div>
                         <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
-                            {loading ? 'Sincronizando...' : (connectionOk ? 'Supabase Online' : 'Status: Local / Erro')}
+                            {loading ? 'Verificando...' : (connectionOk ? 'Supabase Online' : 'Status: Local / Erro')}
                         </span>
                     </button>
                     {isAdmin && (
@@ -164,8 +168,7 @@ const Dashboard = () => {
                 <div className="space-y-4">
                     <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded-r-2xl">
                         <p className="text-[11px] text-blue-700 dark:text-blue-300 font-bold leading-relaxed">
-                            Atenção: Copie apenas o texto abaixo. Não inclua o nome da variável TypeScript. 
-                            Passe este conteúdo no SQL Editor do Supabase.
+                            Crie seu banco de dados no Supabase e execute este script no SQL Editor para configurar as tabelas automaticamente.
                         </p>
                     </div>
                     <div className="relative">
@@ -182,32 +185,43 @@ const Dashboard = () => {
                 </div>
             </Modal>
 
-            <Modal isOpen={isHealthModalOpen} onClose={() => setIsHealthModalOpen(false)} title="Saúde das Tabelas">
-                <div className="space-y-3">
+            <Modal isOpen={isHealthModalOpen} onClose={() => setIsHealthModalOpen(false)} title="Teste de Conexões">
+                <div className="space-y-4">
                     {!isConfigValid && (
-                         <div className="p-6 bg-rose-100 text-rose-800 rounded-2xl border-2 border-rose-300 mb-4">
-                            <p className="font-black text-sm uppercase mb-2">Domínio Não Resolvido</p>
-                            <p className="text-xs font-bold leading-relaxed">
-                                Os erros <b>ERR_NAME_NOT_RESOLVED</b> indicam que a URL do Supabase é inválida. 
-                                Crie um projeto em <a href="https://supabase.com" target="_blank" className="underline">supabase.com</a> e substitua o domínio no código.
+                         <div className="p-6 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 rounded-3xl border border-rose-100 dark:border-rose-900/50">
+                            <h4 className="font-black text-xs uppercase mb-2">🔴 Erro de DNS Detectado</h4>
+                            <p className="text-xs font-medium leading-relaxed">
+                                O navegador não consegue resolver o servidor do Supabase. <br/><br/>
+                                <b>Solução:</b> Acesse <code>lib/supabase.ts</code> e insira uma URL válida como <code>https://abcxyz.supabase.co</code>. 
+                                Atualmente o sistema ignora a URL para evitar travar a interface.
                             </p>
                          </div>
                     )}
-                    {tableStatuses.map(status => (
-                        <div key={status.name} className={`p-4 rounded-2xl border flex items-center justify-between ${status.ok ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-rose-50 border-rose-100 text-rose-700'}`}>
-                            <span className="font-black text-sm uppercase">{status.name}</span>
-                            <span className="text-[10px] font-black uppercase px-2 py-1 bg-white/50 rounded-lg">
-                                {status.ok ? 'Sincronizado' : 'Offline'}
-                            </span>
-                        </div>
-                    ))}
-                    {!connectionOk && (
-                        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-                            <p className="text-[10px] font-bold text-amber-700 uppercase leading-relaxed">
-                                ⚠️ O sistema salvará as alterações localmente e tentará sincronizar assim que a URL for corrigida.
-                            </p>
-                        </div>
-                    )}
+                    
+                    <div className="grid grid-cols-1 gap-2">
+                        {tableStatuses.map(status => (
+                            <div key={status.name} className={`p-4 rounded-2xl border flex flex-col gap-1 ${status.ok ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/50' : 'bg-rose-50/50 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/50'}`}>
+                                <div className="flex items-center justify-between">
+                                    <span className="font-black text-xs uppercase tracking-tight">{status.name}</span>
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${status.ok ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                                        {status.ok ? 'Sucesso' : 'Erro'}
+                                    </span>
+                                </div>
+                                {status.error && <p className="text-[9px] font-bold text-rose-600 dark:text-rose-400 truncate">{status.error}</p>}
+                                <p className="text-[8px] text-gray-400 font-medium">Último teste: {status.testedAt || 'Nunca'}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="pt-4 flex gap-3">
+                        <button 
+                            onClick={testAllConnections}
+                            disabled={loading}
+                            className="flex-1 px-6 py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50"
+                        >
+                            {loading ? 'Testando...' : 'Re-testar Todas Conexões'}
+                        </button>
+                    </div>
                 </div>
             </Modal>
         </div>
