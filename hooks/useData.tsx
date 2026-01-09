@@ -54,6 +54,9 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 const CACHE_KEY = 'gc_data_cache_v2';
 const OUTBOX_KEY = 'gc_outbox_queue_v2';
 
+// Função utilitária para verificar se um ID é um UUID válido
+const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
 const MOCK_DATA = {
   partners: [
     { id: 'p1', companyName: 'Parceiro Exemplo Local', responsible: 'Admin', contact: '0000000', address: 'Local' }
@@ -228,19 +231,29 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     setTimeout(() => saveToCache({ students, teachers, courses, partners, users }), 100);
 
     if (navigator.onLine && isConfigured) {
+      // Se for UPDATE ou DELETE, verificamos se o ID é um UUID antes de tentar no Supabase
+      if ((action === 'UPDATE' || action === 'DELETE') && payload.id && !isUUID(payload.id)) {
+        console.warn("Ignorando chamada API para ID local:", payload.id);
+        return; 
+      }
+
       try {
         let error;
         if (action === 'INSERT') {
           const { error: err } = await supabase.from(table).insert([payload]);
           error = err;
         } else if (action === 'UPDATE') {
-          const { error: err } = await supabase.from(table).update(payload).eq('id', payload.id);
+          const { id, ...dataToUpdate } = payload;
+          const { error: err } = await supabase.from(table).update(dataToUpdate).eq('id', id);
           error = err;
         } else if (action === 'DELETE') {
           const { error: err } = await supabase.from(table).delete().eq('id', payload.id);
           error = err;
         }
-        if (error) throw error;
+        if (error) {
+            console.error(`Erro Supabase (${action} ${table}):`, error);
+            throw error;
+        }
       } catch (e) {
         const newItem: OutboxItem = { id: Math.random().toString(36).substr(2, 9), table, action, payload, timestamp: Date.now() };
         setOutbox(prev => {
@@ -254,12 +267,31 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   const addStudent = (d: Omit<Student, 'id'>) => {
     const tempId = Math.random().toString(36).substr(2, 9);
-    const payload = { name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: d.courseId || null, status: d.status, class: d.class };
+    const payload = { 
+        name: d.name, 
+        cpf: d.cpf, 
+        contact: d.contact, 
+        birth_date: d.birthDate, 
+        address: d.address, 
+        course_id: (d.courseId && isUUID(d.courseId)) ? d.courseId : null, 
+        status: d.status, 
+        class: d.class || null 
+    };
     return handleAction('students', 'INSERT', payload, () => setStudents(p => [...p, { ...d, id: tempId } as Student]));
   };
 
   const updateStudent = (d: Student) => {
-    const payload = { id: d.id, name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: d.courseId || null, status: d.status, class: d.class };
+    const payload = { 
+        id: d.id, 
+        name: d.name, 
+        cpf: d.cpf, 
+        contact: d.contact, 
+        birth_date: d.birthDate, 
+        address: d.address, 
+        course_id: (d.courseId && isUUID(d.courseId)) ? d.courseId : null, 
+        status: d.status, 
+        class: d.class || null 
+    };
     return handleAction('students', 'UPDATE', payload, () => setStudents(p => p.map(s => s.id === d.id ? d : s)));
   };
 
@@ -269,12 +301,35 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   const addCourse = (d: Omit<Course, 'id'>) => {
     const tempId = Math.random().toString(36).substr(2, 9);
-    const payload = { name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: d.partnerId || null, status: d.status };
+    const payload = { 
+        name: d.name, 
+        workload: d.workload, 
+        start_date: d.startDate, 
+        end_date: d.endDate, 
+        start_time: d.startTime, 
+        end_time: d.endTime, 
+        period: d.period, 
+        location: d.location, 
+        partner_id: (d.partnerId && isUUID(d.partnerId)) ? d.partnerId : null, 
+        status: d.status 
+    };
     return handleAction('courses', 'INSERT', payload, () => setCourses(p => [...p, { ...d, id: tempId } as Course]));
   };
 
   const updateCourse = (d: Course) => {
-    const payload = { id: d.id, name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: d.partnerId || null, status: d.status };
+    const payload = { 
+        id: d.id, 
+        name: d.name, 
+        workload: d.workload, 
+        start_date: d.startDate, 
+        end_date: d.endDate, 
+        start_time: d.startTime, 
+        end_time: d.endTime, 
+        period: d.period, 
+        location: d.location, 
+        partner_id: (d.partnerId && isUUID(d.partnerId)) ? d.partnerId : null, 
+        status: d.status 
+    };
     return handleAction('courses', 'UPDATE', payload, () => setCourses(p => p.map(c => c.id === d.id ? d : c)));
   };
 
@@ -297,12 +352,23 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   const addPartner = (d: Omit<Partner, 'id'>) => {
     const tempId = Math.random().toString(36).substr(2, 9);
-    const payload = { company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address };
+    const payload = { 
+        company_name: d.companyName, 
+        responsible: d.responsible, 
+        contact: d.contact, 
+        address: d.address 
+    };
     return handleAction('partners', 'INSERT', payload, () => setPartners(p => [...p, { ...d, id: tempId } as Partner]));
   };
 
   const updatePartner = (d: Partner) => {
-    const payload = { id: d.id, company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address };
+    const payload = { 
+        id: d.id, 
+        company_name: d.companyName, 
+        responsible: d.responsible, 
+        contact: d.contact, 
+        address: d.address 
+    };
     return handleAction('partners', 'UPDATE', payload, () => setPartners(p => p.map(pt => pt.id === d.id ? d : pt)));
   };
 
