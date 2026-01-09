@@ -1,6 +1,6 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase, isConfigured } from '../lib/supabase';
 import type { Student, Teacher, Course, Partner, User } from '../types';
 
 interface TableStatus {
@@ -26,6 +26,7 @@ interface DataContextType {
   isOffline: boolean;
   pendingSyncCount: number;
   tableStatuses: TableStatus[];
+  isConfigValid: boolean;
   refreshData: () => Promise<void>;
   addStudent: (student: Omit<Student, 'id'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;
@@ -63,7 +64,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   });
   const [tableStatuses, setTableStatuses] = useState<TableStatus[]>([]);
 
-  // Carregar Cache Inicial
   useEffect(() => {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
@@ -80,7 +80,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     }
   }, []);
 
-  // Monitor de Conectividade
   useEffect(() => {
     const handleOnline = () => {
       setIsOffline(false);
@@ -112,9 +111,8 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   };
 
   const processOutbox = useCallback(async () => {
-    if (outbox.length === 0 || !navigator.onLine) return;
+    if (outbox.length === 0 || !navigator.onLine || !isConfigured) return;
 
-    console.log(`Sincronizando ${outbox.length} itens pendentes...`);
     const remainingOutbox = [...outbox];
     
     for (const item of outbox) {
@@ -131,15 +129,13 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
           error = err;
         }
 
-        // Se não houver erro ou se for um erro de "não encontrado" (que indica que já foi resolvido), removemos da fila
         if (!error || error.code === 'PGRST116') {
           const index = remainingOutbox.findIndex(i => i.id === item.id);
           if (index > -1) remainingOutbox.splice(index, 1);
         } else {
-          console.error(`Falha ao sincronizar item ${item.id}:`, error);
+          break; // Para se houver erro de conexão
         }
       } catch (e) {
-        console.error("Erro de rede durante processamento do outbox", e);
         break; 
       }
     }
@@ -150,14 +146,14 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
   }, [outbox]);
 
   const refreshData = async () => {
-    if (!navigator.onLine) {
+    if (!navigator.onLine || !isConfigured) {
       setLoading(false);
       return;
     }
     
     setLoading(true);
     try {
-      const [pRes, tRes, cRes, sRes, uRes] = await Promise.all([
+      const results = await Promise.allSettled([
         supabase.from('partners').select('*'),
         supabase.from('teachers').select('*'),
         supabase.from('courses').select('*'),
@@ -165,50 +161,50 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         supabase.from('users').select('*').order('is_online', { ascending: false })
       ]);
 
-      const mappedPartners = pRes.data?.map(p => ({
-        id: p.id, companyName: p.company_name, responsible: p.responsible, contact: p.contact, address: p.address
-      })) || partners;
+      const statuses: TableStatus[] = [];
+      const tables = ['Parceiros', 'Professores', 'Cursos', 'Alunos', 'Usuários'];
 
-      const mappedCourses = cRes.data?.map(c => ({
-        id: c.id, name: c.name, workload: c.workload, startDate: c.start_date, endDate: c.end_date,
-        startTime: c.start_time, endTime: c.end_time, period: c.period, location: c.location,
-        partnerId: c.partner_id, status: c.status, teacherIds: []
-      })) || courses;
-
-      const mappedStudents = sRes.data?.map(s => ({
-        id: s.id, name: s.name, cpf: s.cpf, contact: s.contact, birthDate: s.birth_date,
-        address: s.address, courseId: s.course_id, status: s.status, class: s.class
-      })) || students;
-
-      const mappedUsers = uRes.data?.map(u => ({
-        id: u.id, name: u.name, username: u.username, role: u.role, isOnline: u.is_online, lastSeen: u.last_seen
-      })) || users;
-
-      const mappedTeachers = tRes.data || teachers;
-
-      setPartners(mappedPartners);
-      setTeachers(mappedTeachers);
-      setCourses(mappedCourses);
-      setStudents(mappedStudents);
-      setUsers(mappedUsers);
-
-      setTableStatuses([
-        { name: 'Parceiros', ok: !pRes.error },
-        { name: 'Professores', ok: !tRes.error },
-        { name: 'Cursos', ok: !cRes.error },
-        { name: 'Alunos', ok: !sRes.error },
-        { name: 'Usuários', ok: !uRes.error },
-      ]);
-
-      saveToCache({ 
-        students: mappedStudents, 
-        teachers: mappedTeachers, 
-        courses: mappedCourses, 
-        partners: mappedPartners, 
-        users: mappedUsers 
+      results.forEach((res, idx) => {
+        statuses.push({
+          name: tables[idx],
+          ok: res.status === 'fulfilled' && !res.value.error
+        });
       });
+
+      setTableStatuses(statuses);
+
+      // Processar dados apenas das promessas que deram certo
+      if (results[0].status === 'fulfilled' && results[0].value.data) {
+        setPartners(results[0].value.data.map(p => ({
+          id: p.id, companyName: p.company_name, responsible: p.responsible, contact: p.contact, address: p.address
+        })));
+      }
+      if (results[1].status === 'fulfilled' && results[1].value.data) {
+        setTeachers(results[1].value.data);
+      }
+      if (results[2].status === 'fulfilled' && results[2].value.data) {
+        setCourses(results[2].value.data.map(c => ({
+          id: c.id, name: c.name, workload: c.workload, startDate: c.start_date, endDate: c.end_date,
+          startTime: c.start_time, endTime: c.end_time, period: c.period, location: c.location,
+          partnerId: c.partner_id, status: c.status, teacherIds: []
+        })));
+      }
+      if (results[3].status === 'fulfilled' && results[3].value.data) {
+        setStudents(results[3].value.data.map(s => ({
+          id: s.id, name: s.name, cpf: s.cpf, contact: s.contact, birthDate: s.birth_date,
+          address: s.address, courseId: s.course_id, status: s.status, class: s.class
+        })));
+      }
+      if (results[4].status === 'fulfilled' && results[4].value.data) {
+        setUsers(results[4].value.data.map(u => ({
+          id: u.id, name: u.name, username: u.username, role: u.role, isOnline: u.is_online, lastSeen: u.last_seen
+        })));
+      }
+
+      saveToCache({ students, teachers, courses, partners, users });
     } catch (err) {
-      console.error('Erro na sincronização ativa:', err);
+      console.warn('Falha na rede ao tentar sincronizar. Operando em modo offline.');
+      setIsOffline(true);
     } finally {
       setLoading(false);
     }
@@ -218,11 +214,10 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     refreshData();
   }, []);
 
-  // CRUD GERAL COM OUTBOX
   const handleAction = async (table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', payload: any, updateLocalState: () => void) => {
-    updateLocalState(); // UI Otimista
+    updateLocalState();
     
-    if (navigator.onLine) {
+    if (navigator.onLine && isConfigured) {
       try {
         let error;
         if (action === 'INSERT') {
@@ -239,7 +234,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         if (error) throw error;
         await refreshData();
       } catch (e) {
-        console.warn(`Erro ao salvar online em ${table}, movendo para Outbox...`);
         addToOutbox({ table, action, payload });
       }
     } else {
@@ -247,7 +241,6 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     }
   };
 
-  // Funções específicas (Wrapper do handleAction)
   const addStudent = (d: Omit<Student, 'id'>) => {
     const tempId = Math.random().toString(36).substr(2, 9);
     const payload = { name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: d.courseId || null, status: d.status, class: d.class };
@@ -312,7 +305,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   return (
     <DataContext.Provider value={{
-      students, teachers, courses, partners, users, loading, isOffline, pendingSyncCount: outbox.length, tableStatuses, refreshData,
+      students, teachers, courses, partners, users, loading, isOffline, pendingSyncCount: outbox.length, tableStatuses, isConfigValid: isConfigured, refreshData,
       addStudent, updateStudent, removeStudent,
       addTeacher, updateTeacher, removeTeacher,
       addCourse, updateCourse, removeCourse,

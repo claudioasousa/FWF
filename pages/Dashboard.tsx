@@ -40,7 +40,7 @@ const QuickAction = ({ to, label, icon, bg }: { to: string; label: string; icon:
 );
 
 const Dashboard = () => {
-    const { students, courses, teachers, partners, loading, tableStatuses, refreshData } = useData();
+    const { students, courses, teachers, partners, loading, tableStatuses, refreshData, isConfigValid } = useData();
     const { isAdmin } = useAuth();
     const [isSchemaModalOpen, setIsSchemaModalOpen] = useState(false);
     const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
@@ -59,16 +59,24 @@ const Dashboard = () => {
     }, [students]);
 
     const handleCopySQL = () => {
-        // Copia apenas a string SQL, sem o código TypeScript
         navigator.clipboard.writeText(DATABASE_SCHEMA_SQL);
         setCopySuccess(true);
         setTimeout(() => setCopySuccess(false), 2000);
     };
 
-    const connectionOk = tableStatuses.length > 0 && tableStatuses.every(s => s.ok);
+    const connectionOk = isConfigValid && tableStatuses.length > 0 && tableStatuses.every(s => s.ok);
 
     return (
         <div className="animate-fadeIn max-w-7xl mx-auto space-y-10 pb-10">
+            {!isConfigValid && (
+                <div className="bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-500 p-8 rounded-[32px] animate-pulse">
+                    <h3 className="text-rose-600 dark:text-rose-400 font-black text-xl mb-2">⚠️ Configuração Necessária</h3>
+                    <p className="text-rose-700 dark:text-rose-300 text-sm font-bold">
+                        O sistema está operando em <b>Modo Local</b>. Para habilitar a nuvem, atualize as credenciais no arquivo <code>lib/supabase.ts</code> com a URL e Chave do seu projeto.
+                    </p>
+                </div>
+            )}
+
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h1 className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">Painel de Gestão</h1>
@@ -81,7 +89,7 @@ const Dashboard = () => {
                     >
                         <div className={`w-2 h-2 rounded-full ${loading ? 'bg-amber-500 animate-bounce' : (connectionOk ? 'bg-emerald-500' : 'bg-rose-500')} mr-3`}></div>
                         <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
-                            {loading ? 'Sincronizando...' : (connectionOk ? 'Supabase Online' : 'Atenção ao Banco')}
+                            {loading ? 'Sincronizando...' : (connectionOk ? 'Supabase Online' : 'Status: Local / Erro')}
                         </span>
                     </button>
                     {isAdmin && (
@@ -135,7 +143,7 @@ const Dashboard = () => {
                 <div className="bg-white dark:bg-gray-800 p-10 rounded-[48px] shadow-sm border border-gray-100 dark:border-gray-700">
                     <h2 className="text-2xl font-black mb-8">Novas Matrículas</h2>
                     <div className="space-y-6">
-                        {recentStudents.map(s => (
+                        {recentStudents.length > 0 ? recentStudents.map(s => (
                             <div key={s.id} className="flex items-center gap-4 group">
                                 <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center font-black text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
                                     {s.name.charAt(0)}
@@ -145,7 +153,9 @@ const Dashboard = () => {
                                     <p className="text-[10px] text-gray-400 font-bold uppercase">{s.status}</p>
                                 </div>
                             </div>
-                        ))}
+                        )) : (
+                            <p className="text-center py-10 text-gray-400 font-bold uppercase text-[10px]">Sem dados</p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -174,18 +184,27 @@ const Dashboard = () => {
 
             <Modal isOpen={isHealthModalOpen} onClose={() => setIsHealthModalOpen(false)} title="Saúde das Tabelas">
                 <div className="space-y-3">
+                    {!isConfigValid && (
+                         <div className="p-6 bg-rose-100 text-rose-800 rounded-2xl border-2 border-rose-300 mb-4">
+                            <p className="font-black text-sm uppercase mb-2">Domínio Não Resolvido</p>
+                            <p className="text-xs font-bold leading-relaxed">
+                                Os erros <b>ERR_NAME_NOT_RESOLVED</b> indicam que a URL do Supabase é inválida. 
+                                Crie um projeto em <a href="https://supabase.com" target="_blank" className="underline">supabase.com</a> e substitua o domínio no código.
+                            </p>
+                         </div>
+                    )}
                     {tableStatuses.map(status => (
                         <div key={status.name} className={`p-4 rounded-2xl border flex items-center justify-between ${status.ok ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-rose-50 border-rose-100 text-rose-700'}`}>
                             <span className="font-black text-sm uppercase">{status.name}</span>
                             <span className="text-[10px] font-black uppercase px-2 py-1 bg-white/50 rounded-lg">
-                                {status.ok ? 'Sincronizado' : 'Erro de Conexão'}
+                                {status.ok ? 'Sincronizado' : 'Offline'}
                             </span>
                         </div>
                     ))}
                     {!connectionOk && (
                         <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
                             <p className="text-[10px] font-bold text-amber-700 uppercase leading-relaxed">
-                                ⚠️ Se alguma tabela estiver com erro, certifique-se de que você executou o script SQL no Supabase.
+                                ⚠️ O sistema salvará as alterações localmente e tentará sincronizar assim que a URL for corrigida.
                             </p>
                         </div>
                     )}
