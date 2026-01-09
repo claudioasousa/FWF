@@ -15,7 +15,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   const navItems = [
@@ -43,7 +43,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       `}>
         <div className="flex flex-col h-full glass rounded-[2.5rem] shadow-2xl shadow-blue-500/5 relative overflow-hidden border border-white/20 dark:border-white/5">
           
-          {/* Version Badge Top Right */}
           <div className="absolute top-8 right-8 text-[8px] font-black uppercase tracking-tighter opacity-20 dark:opacity-40 rotate-90 origin-right">
             Build 2025.02
           </div>
@@ -93,14 +92,25 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             </button>
 
             <div className="p-4 rounded-[2rem] bg-gradient-to-br from-slate-50 to-white dark:from-slate-800/80 dark:to-slate-900/80 border border-slate-200/50 dark:border-white/5 shadow-inner">
-               <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-500/20">
-                    {user?.name.charAt(0)}
+               <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-500/20">
+                      {user?.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black text-slate-900 dark:text-white truncate uppercase tracking-tight leading-none">{user?.name.split(' ')[0]}</p>
+                      <p className="text-[8px] font-bold text-blue-500 uppercase tracking-widest mt-1">{user?.role}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[12px] font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">{user?.name}</p>
-                    <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">{user?.role}</p>
-                  </div>
+                  <button 
+                    onClick={logout}
+                    className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all"
+                    title="Sair do sistema"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                  </button>
                </div>
             </div>
           </div>
