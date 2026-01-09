@@ -2,26 +2,23 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.1';
 
 // --- CONFIGURAÇÃO DO SUPABASE ---
-// Para conectar ao seu banco real:
-// 1. Crie um projeto em https://supabase.com
-// 2. Vá em Project Settings -> API e copie os valores abaixo
-const supabaseUrl = 'https://SUA_URL_AQUI.supabase.co'; 
-const supabaseKey = 'SUA_CHAVE_ANON_AQUI';
+// URL e Chave atualizadas conforme fornecido.
+const supabaseUrl = 'https://fpuetcwkvzejxpooguac.supabase.co'; 
+const supabaseKey = 'sb_publishable_k1IJsKmejk4jmqpNReSPfg_fJ1I6qsS'; 
 // --------------------------------
 
-// Verifica se a URL é o placeholder padrão ou a URL de teste antiga que está falhando
-const isInvalid = 
+// O sistema entrará em modo "Online" apenas se a URL e a Chave forem preenchidas corretamente.
+const isPlaceholder = 
   !supabaseUrl || 
   supabaseUrl.includes('SUA_URL_AQUI') || 
-  supabaseUrl.includes('fpuetcwkvzejpooguac') || // Bloqueia o domínio que está gerando erro de DNS
-  !supabaseUrl.startsWith('https://');
+  supabaseKey.includes('SUA_CHAVE_ANON_AQUI');
 
-export const isConfigured = !isInvalid;
+export const isConfigured = !isPlaceholder;
 
 /**
- * World-class connection handling: 
- * Se não configurado, apontamos para localhost para evitar que o navegador 
- * tente resolver um domínio externo inexistente (DNS Error).
+ * Cliente Supabase:
+ * Se as credenciais forem válidas, conecta à rede.
+ * Caso contrário, aponta para um endereço inofensivo para evitar erros de DNS no console.
  */
 export const supabase = createClient(
   isConfigured ? supabaseUrl : 'http://127.0.0.1', 
