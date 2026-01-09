@@ -1,7 +1,5 @@
-
-export const DATABASE_SCHEMA_SQL = `-- SCRIPT DE CRIAÇÃO DO BANCO DE DADOS - GESTÃO DE CURSOS
+-- SCRIPT DE CRIAÇÃO DO BANCO DE DADOS - GESTÃO DE CURSOS
 -- Execute este script no SQL Editor do seu projeto Supabase.
--- Projeto: Gestao Cursos (https://fpuetcwkvzejpooguac.supabase.co)
 
 -- 1. CRIAÇÃO DE TIPOS (ENUMS)
 DO $$
@@ -98,4 +96,4 @@ VALUES
 ('Claudio A. Sousa', 'claudioasousa', 'cas661010', 'ADMIN'),
 ('Administrador', 'admin', 'admin', 'ADMIN'),
 ('Admin Teste', 'admin_teste', 'admin123', 'ADMIN')
-ON CONFLICT (username) DO NOTHING;`;
+ON CONFLICT (username) DO NOTHING;

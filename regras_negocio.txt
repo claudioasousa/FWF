@@ -1,0 +1,45 @@
+SISTEMA DE GESTÃO DE CURSOS - DOCUMENTAÇÃO TÉCNICA E REGRAS DE NEGÓCIO
+
+1. OBJETIVO DO SISTEMA
+Gerenciar o ciclo de vida acadêmico de cursos livres, desde o cadastro de patrocinadores (parceiros) até a enturmação e monitoramento de status dos alunos.
+
+2. ESTRUTURA DE TABELAS (SUPABASE)
+---------------------------------------------------------
+- users: Acesso ao sistema. Diferencia ADMIN (gestão total) de OPERATOR (cadastros básicos).
+- partners: Empresas parceiras. Vinculadas aos cursos para indicar quem financia a oferta.
+- teachers: Docentes especialistas. Podem estar em vários cursos simultaneamente.
+- courses: O "produto" educacional. Define carga horária, turno (Manhã/Tarde/Noite) e local.
+- students: Base principal. Cada aluno possui CPF único e histórico de turma/status.
+
+3. PRINCIPAIS REGRAS DE NEGÓCIO
+---------------------------------------------------------
+A. UNICIDADE DE CPF: 
+   O sistema impede cadastros duplicados de pessoas físicas através da constraint UNIQUE no campo CPF.
+
+B. RESTRIÇÃO DE TURNOS (MATRÍCULA SIMULTÂNEA): 
+   Um aluno pode participar de mais de um curso ao mesmo tempo, DESDE QUE os turnos não coincidam.
+   Exemplo: Permitido (Curso A - Manhã + Curso B - Noite). Bloqueado (Curso A - Manhã + Curso B - Manhã).
+
+C. ENTURMAÇÃO (CLASS): 
+   Os alunos de um curso são subdivididos em letras de 'A' a 'H'. Essa divisão é feita manualmente pelo administrador no módulo de "Enturmação".
+
+D. STATUS ACADÊMICO: 
+   - CURSANDO: Aluno com matrícula ativa.
+   - APROVADO: Concluiu com êxito (Habilita emissão de certificado).
+   - REPROVADO: Não atingiu os requisitos.
+   - DESISTENTE: Abandono de curso.
+
+E. SEGURANÇA E ACESSO:
+   - Administradores (ADMIN) podem criar novos usuários e gerenciar a fila de enturmação.
+   - Operadores (OPERATOR) focam no atendimento e cadastro de dados.
+
+4. CREDENCIAIS DE TESTE (ADMIN)
+---------------------------------------------------------
+- Login: admin_teste | Senha: admin123
+- Login: admin | Senha: admin
+- Login: claudioasousa | Senha: cas661010
+
+5. EXPORTAÇÃO
+---------------------------------------------------------
+- PDF: Layout limpo para pautas de presença físicas.
+- XLSX: Dados tabulares para cruzamento em Excel/BI.
