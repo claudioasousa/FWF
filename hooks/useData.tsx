@@ -58,7 +58,7 @@ const OUTBOX_KEY = 'gc_outbox_queue_v2';
 
 const isUUID = (id: any) => {
   if (typeof id !== 'string') return false;
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 };
 
 const MOCK_DATA = {
@@ -91,7 +91,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     { name: 'Usuários', table: 'users', ok: false },
   ]);
 
-  const saveToCache = useCallback((data: any) => {
+  const saveToCache = useCallback((data: { students: Student[], teachers: Teacher[], courses: Course[], partners: Partner[], users: User[] }) => {
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
   }, []);
 
@@ -246,7 +246,58 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
     };
   }, []);
 
-  const handleAction = async (table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', payload: any, updateLocalState: () => void) => {
+  const handleAction = async (table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', payload: any) => {
+    // 1. ATUALIZAÇÃO OTIMISTA (Mudar estado local primeiro)
+    const tempId = payload.id || Math.random().toString(36).substr(2, 9);
+    const itemToSync = { ...payload, id: tempId };
+
+    const updateStateOptimistically = () => {
+        if (table === 'students') {
+            const studentData: Student = {
+                id: tempId,
+                name: payload.name,
+                cpf: payload.cpf,
+                contact: payload.contact,
+                birthDate: payload.birth_date || payload.birthDate,
+                address: payload.address,
+                courseId: payload.course_id || payload.courseId,
+                status: payload.status,
+                class: payload.class
+            };
+
+            setStudents(prev => {
+                if (action === 'DELETE') return prev.filter(s => s.id !== payload.id);
+                if (action === 'UPDATE') return prev.map(s => s.id === payload.id ? studentData : s);
+                return [...prev, studentData];
+            });
+        }
+        // Repetir lógica simplificada para outras tabelas se necessário...
+        else if (table === 'courses') {
+          setCourses(prev => {
+              if (action === 'DELETE') return prev.filter(c => c.id !== payload.id);
+              if (action === 'UPDATE') return prev.map(c => c.id === payload.id ? { ...c, ...payload } : c);
+              return [...prev, { ...payload, id: tempId }];
+          });
+        }
+        else if (table === 'partners') {
+          setPartners(prev => {
+              if (action === 'DELETE') return prev.filter(p => p.id !== payload.id);
+              if (action === 'UPDATE') return prev.map(p => p.id === payload.id ? { ...p, ...payload } : p);
+              return [...prev, { ...payload, id: tempId }];
+          });
+        }
+        else if (table === 'teachers') {
+          setTeachers(prev => {
+              if (action === 'DELETE') return prev.filter(t => t.id !== payload.id);
+              if (action === 'UPDATE') return prev.map(t => t.id === payload.id ? { ...t, ...payload } : t);
+              return [...prev, { ...payload, id: tempId }];
+          });
+        }
+    };
+
+    updateStateOptimistically();
+
+    // 2. TENTATIVA DE SINCRONIZAÇÃO REAL
     const needsUuid = action === 'UPDATE' || action === 'DELETE';
     const hasValidUuid = payload.id && isUUID(payload.id);
 
@@ -254,7 +305,7 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
       try {
         let res;
         if (action === 'INSERT') {
-            const { id: tempId, ...cleanPayload } = payload;
+            const { id: _, ...cleanPayload } = payload;
             res = await supabase.from(table).insert([cleanPayload]);
         }
         else if (action === 'UPDATE') {
@@ -269,12 +320,13 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
         await refreshData();
         return;
       } catch (e) {
-        // Fallback para outbox em caso de erro momentâneo
+        console.warn("Falha no envio, mantendo em Outbox");
       }
     }
 
+    // 3. PERSISTÊNCIA NO OUTBOX CASO OFFLINE
     const newItem = { 
-        id: Math.random().toString(36).substr(2, 9), 
+        id: tempId, 
         table, 
         action, 
         payload, 
@@ -286,29 +338,27 @@ export const DataProvider = ({ children }: React.PropsWithChildren<{}>) => {
       localStorage.setItem(OUTBOX_KEY, JSON.stringify(up));
       return up;
     });
-
-    updateLocalState();
   };
 
-  const addStudent = (d: any) => handleAction('students', 'INSERT', { name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: isUUID(d.courseId) ? d.courseId : null, status: d.status, class: d.class || null }, () => refreshData());
-  const updateStudent = (d: any) => handleAction('students', 'UPDATE', { id: d.id, name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: isUUID(d.courseId) ? d.courseId : null, status: d.status, class: d.class || null }, () => refreshData());
-  const removeStudent = (id: string) => handleAction('students', 'DELETE', { id }, () => refreshData());
+  const addStudent = (d: any) => handleAction('students', 'INSERT', { name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: isUUID(d.courseId) ? d.courseId : null, status: d.status, class: d.class || null });
+  const updateStudent = (d: any) => handleAction('students', 'UPDATE', { id: d.id, name: d.name, cpf: d.cpf, contact: d.contact, birth_date: d.birthDate, address: d.address, course_id: isUUID(d.courseId) ? d.courseId : null, status: d.status, class: d.class || null });
+  const removeStudent = (id: string) => handleAction('students', 'DELETE', { id });
   
-  const addCourse = (d: any) => handleAction('courses', 'INSERT', { name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: isUUID(d.partnerId) ? d.partnerId : null, status: d.status }, () => refreshData());
-  const updateCourse = (d: any) => handleAction('courses', 'UPDATE', { id: d.id, name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: isUUID(d.partnerId) ? d.partnerId : null, status: d.status }, () => refreshData());
-  const removeCourse = (id: string) => handleAction('courses', 'DELETE', { id }, () => refreshData());
+  const addCourse = (d: any) => handleAction('courses', 'INSERT', { name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: isUUID(d.partnerId) ? d.partnerId : null, status: d.status });
+  const updateCourse = (d: any) => handleAction('courses', 'UPDATE', { id: d.id, name: d.name, workload: d.workload, start_date: d.startDate, end_date: d.endDate, start_time: d.startTime, end_time: d.endTime, period: d.period, location: d.location, partner_id: isUUID(d.partnerId) ? d.partnerId : null, status: d.status });
+  const removeCourse = (id: string) => handleAction('courses', 'DELETE', { id });
   
-  const addTeacher = (d: any) => handleAction('teachers', 'INSERT', d, () => refreshData());
-  const updateTeacher = (d: any) => handleAction('teachers', 'UPDATE', d, () => refreshData());
-  const removeTeacher = (id: string) => handleAction('teachers', 'DELETE', { id }, () => refreshData());
+  const addTeacher = (d: any) => handleAction('teachers', 'INSERT', d);
+  const updateTeacher = (d: any) => handleAction('teachers', 'UPDATE', d);
+  const removeTeacher = (id: string) => handleAction('teachers', 'DELETE', { id });
   
-  const addPartner = (d: any) => handleAction('partners', 'INSERT', { company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address }, () => refreshData());
-  const updatePartner = (d: any) => handleAction('partners', 'UPDATE', { id: d.id, company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address }, () => refreshData());
-  const removePartner = (id: string) => handleAction('partners', 'DELETE', { id }, () => refreshData());
+  const addPartner = (d: any) => handleAction('partners', 'INSERT', { company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address });
+  const updatePartner = (d: any) => handleAction('partners', 'UPDATE', { id: d.id, company_name: d.companyName, responsible: d.responsible, contact: d.contact, address: d.address });
+  const removePartner = (id: string) => handleAction('partners', 'DELETE', { id });
   
-  const addUser = (d: any) => handleAction('users', 'INSERT', d, () => refreshData());
-  const updateUser = (d: any) => handleAction('users', 'UPDATE', d, () => refreshData());
-  const removeUser = (id: string) => handleAction('users', 'DELETE', { id }, () => refreshData());
+  const addUser = (d: any) => handleAction('users', 'INSERT', d);
+  const updateUser = (d: any) => handleAction('users', 'UPDATE', d);
+  const removeUser = (id: string) => handleAction('users', 'DELETE', { id });
 
   return (
     <DataContext.Provider value={{
